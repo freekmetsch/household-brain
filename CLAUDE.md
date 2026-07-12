@@ -20,7 +20,7 @@ npm run dev
 ```
 
 - `npm run check` — svelte-check (types + template diagnostics).
-- `npm test` — vitest, no network calls, no cost.
+- `npm run test:unit` — vitest, no network calls, no cost.
 - `npm run build` — production bundle; also the fastest way to catch a broken Tailwind class or Svelte compile error.
 
 Run all three before opening a PR.
