@@ -13,6 +13,7 @@
 	import BottomSheet from '$lib/components/ui/BottomSheet.svelte';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
 	import { optimistic } from '$lib/optimistic';
+	import { m } from '$lib/paraglide/messages';
 	import type { PreviewItem, PushProduct, PushFreetext, PushSkipped } from '$lib/shopping_ah';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { fade } from 'svelte/transition';
@@ -106,7 +107,7 @@
 			.map((i) => ({ ref: itemRef(i), name: i.name, amount: i.amount, unit: i.unit }));
 		if (!toSend.length) {
 			ahLoading = false;
-			ahError = 'No pending items.';
+			ahError = m.shopping_ah_error_no_pending();
 			return;
 		}
 
@@ -121,8 +122,8 @@
 		// week's state.
 		if (weekStart !== weekAtOpen) return;
 		if (!r.ok) {
-			ahError = 'AH connection failed.';
-			toast.error('Could not load AH matches.');
+			ahError = m.shopping_ah_error_connection_failed();
+			toast.error(m.shopping_toast_ah_matches_failed());
 			return;
 		}
 		const d = await r.json();
@@ -181,7 +182,7 @@
 			() => {
 				favorites = before;
 			},
-			'Could not save the favorite.'
+			m.shopping_toast_favorite_failed()
 		);
 	}
 
@@ -213,7 +214,7 @@
 			});
 			if (stale()) return;
 			if (!r.ok) {
-				toast.error('AH search failed.');
+				toast.error(m.shopping_toast_ah_search_failed());
 				return;
 			}
 			const d = await r.json();
@@ -221,7 +222,7 @@
 			if (stale() || !current) return;
 			const fresh = d.ok ? (d.items as PreviewItem[])[0] : null;
 			if (!fresh || fresh.status !== 'product' || !fresh.candidates.length) {
-				toast.error(`No AH products for "${term}".`);
+				toast.error(m.shopping_toast_ah_no_products({ term }));
 				return;
 			}
 			ahItems = current.map((it) =>
@@ -262,7 +263,7 @@
 			}
 		}
 		if (!products.length && !freetext.length) {
-			ahError = 'Everything is skipped — nothing to send.';
+			ahError = m.shopping_ah_error_all_skipped();
 			return;
 		}
 
@@ -279,8 +280,8 @@
 		// changed, so we never mark the wrong week's items bought.
 		if (weekStart !== weekAtPush) return;
 		if (!r.ok) {
-			ahError = 'Push failed.';
-			toast.error('Could not send items to AH.');
+			ahError = m.shopping_ah_error_push_failed();
+			toast.error(m.shopping_toast_ah_push_failed());
 			return;
 		}
 		const d = await r.json();
@@ -307,14 +308,14 @@
 			};
 			ahItems = null;
 		} else {
-			ahError = d.reason ?? 'Push failed — nothing was added.';
+			ahError = d.reason ?? m.shopping_ah_error_push_failed_generic();
 		}
 	}
 </script>
 
-<BottomSheet bind:open={ahOpen} title="Review AH order">
+<BottomSheet bind:open={ahOpen} title={m.shopping_review_ah_order()}>
 	{#if ahLoading}
-		<div class="space-y-2 py-1" aria-label="Matching AH products" role="status">
+		<div class="space-y-2 py-1" aria-label={m.shopping_ah_matching_products_aria()} role="status">
 			{#each Array(3) as _}
 				<div class="animate-pulse rounded-2xl border border-base-300/60 p-3">
 					<div class="h-4 w-1/3 rounded bg-base-200"></div>
@@ -332,15 +333,15 @@
 		<div class="rounded-2xl border border-warning/30 bg-warning/10 px-3 py-2 text-sm" role="status">
 			<div class="flex gap-2">
 				<Icon name="warn" class="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-				<span>Not connected to Albert Heijn — nothing can be sent.</span>
+				<span>{m.shopping_ah_not_connected_body()}</span>
 			</div>
 		</div>
 		<p class="mt-3 text-sm text-base-content/60">
-			Connect the household AH account in Settings first, then try again.
+			{m.shopping_ah_connect_first()}
 		</p>
 		<div class="mt-4 flex justify-end gap-2">
-			<button type="button" class="btn btn-ghost" onclick={() => (ahOpen = false)}>Close</button>
-			<a href="{base}/settings" class="btn btn-primary">Open Settings</a>
+			<button type="button" class="btn btn-ghost" onclick={() => (ahOpen = false)}>{m.ui_bottomsheet_close()}</button>
+			<a href="{base}/settings" class="btn btn-primary">{m.shopping_open_settings_button()}</a>
 		</div>
 	{:else if ahResult}
 		<AhPushResult
@@ -353,7 +354,7 @@
 	{:else if ahError}
 		<div class="rounded-2xl border border-error/30 bg-error/10 px-3 py-2 text-sm" role="alert">{ahError}</div>
 		<div class="mt-4 flex justify-end">
-			<button type="button" class="btn" onclick={() => (ahOpen = false)}>Close</button>
+			<button type="button" class="btn" onclick={() => (ahOpen = false)}>{m.ui_bottomsheet_close()}</button>
 		</div>
 	{:else if ahItems}
 		<ul class="mb-4 max-h-[55vh] space-y-2 overflow-y-auto" in:fade={{ duration: 150 }}>
@@ -376,10 +377,12 @@
 		</ul>
 
 		<div class="mb-2 text-xs text-base-content/50">
-			{pushSummary.products} product{pushSummary.products === 1 ? '' : 's'}, {pushSummary.text} as text{#if pushSummary.excluded}, {pushSummary.excluded} skipped{/if}
+			{pushSummary.products === 1
+				? m.shopping_ah_summary_products_singular({ count: pushSummary.products })
+				: m.shopping_ah_summary_products_plural({ count: pushSummary.products })}, {m.shopping_ah_summary_as_text({ count: pushSummary.text })}{#if pushSummary.excluded}, {m.shopping_ah_summary_skipped({ count: pushSummary.excluded })}{/if}
 		</div>
 		<div class="flex justify-end gap-2">
-			<button type="button" class="btn btn-ghost" onclick={() => (ahOpen = false)}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={() => (ahOpen = false)}>{m.shopping_cancel_button()}</button>
 			<button
 				type="button"
 				class="btn btn-primary"
@@ -388,9 +391,9 @@
 			>
 				{#if ahPushing}
 					<span class="loading loading-spinner loading-xs"></span>
-					Sending...
+					{m.shopping_ah_sending_label()}
 				{:else}
-					Send to AH
+					{m.shopping_send_to_ah_button()}
 				{/if}
 			</button>
 		</div>

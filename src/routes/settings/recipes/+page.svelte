@@ -4,6 +4,7 @@
 	import SegmentedTabs from '$lib/components/ui/SegmentedTabs.svelte';
 	import SettingsPanelHeader from '$lib/components/settings/SettingsPanelHeader.svelte';
 	import { optimistic } from '$lib/optimistic';
+	import { m } from '$lib/paraglide/messages';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { SORT_OPTIONS, type SortBy } from '$lib/recipe_sort';
 	import { untrack } from 'svelte';
@@ -15,13 +16,13 @@
 	type OnOff = 'on' | 'off';
 
 	const languageTabs = [
-		{ value: 'en', label: 'English' },
-		{ value: 'nl', label: 'Dutch' }
+		{ value: 'en', label: m.recipes_edit_language_english() },
+		{ value: 'nl', label: m.recipes_edit_language_dutch() }
 	] satisfies { value: RecipeLanguage; label: string }[];
 
 	const onOffTabs = [
-		{ value: 'off', label: 'Off' },
-		{ value: 'on', label: 'On' }
+		{ value: 'off', label: m.settings_common_off() },
+		{ value: 'on', label: m.settings_common_on() }
 	] satisfies { value: OnOff; label: string }[];
 
 	let recipeLanguage = $state<RecipeLanguage>(untrack(() => data.recipeLanguage as RecipeLanguage));
@@ -47,11 +48,11 @@
 				recipeLanguage = previous.recipeLanguage;
 				defaultSort = previous.defaultSort;
 			},
-			'Could not save.'
+			m.settings_recipes_save_failed()
 		);
 		recipePrefsSaving = false;
 		if (ok) {
-			toast.success(patch.recipeLanguage ? 'Saved recipe language' : 'Saved default sort');
+			toast.success(patch.recipeLanguage ? m.settings_recipes_saved_language() : m.settings_recipes_saved_sort());
 			await invalidateAll();
 		}
 	}
@@ -72,29 +73,29 @@
 				autoTranslate = previous.autoTranslate;
 				cookModePregen = previous.cookModePregen;
 			},
-			'Could not save.'
+			m.settings_recipes_save_failed()
 		);
 		recipeTogglesSaving = false;
 		if (ok) {
-			toast.success(patch.autoTranslateOnImport !== undefined ? 'Saved auto-translate' : 'Saved cook-mode pre-generation');
+			toast.success(patch.autoTranslateOnImport !== undefined ? m.settings_recipes_saved_autotranslate() : m.settings_recipes_saved_cookmode_pregen());
 			await invalidateAll();
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>Recipes - Settings</title>
+	<title>{m.settings_recipes_title()}</title>
 </svelte:head>
 
 <div class="ui-page-shell px-4 pt-4">
-	<SettingsPanelHeader title="Recipes" />
+	<SettingsPanelHeader title={m.settingsshell_panel_recipes()} />
 
 	<div class="flex flex-col gap-5">
 		<section class="ui-form-card">
-			<h2 class="ui-section-label mb-3">Display</h2>
+			<h2 class="ui-section-label mb-3">{m.settingsshell_panel_display()}</h2>
 			<div class="flex flex-col gap-4">
 				<div>
-					<span class="ui-field-label mb-1.5 block" id="recipe-language-label">Recipe language</span>
+					<span class="ui-field-label mb-1.5 block" id="recipe-language-label">{m.settings_recipes_language_label()}</span>
 					<div
 						class:pointer-events-none={recipePrefsSaving}
 						class:opacity-60={recipePrefsSaving}
@@ -108,7 +109,7 @@
 					</div>
 				</div>
 				<div class="border-t border-base-300 pt-3">
-					<span class="ui-field-label mb-1.5 block" id="default-sort-label">Default sort</span>
+					<span class="ui-field-label mb-1.5 block" id="default-sort-label">{m.settings_recipes_default_sort_label()}</span>
 					<div
 						class:pointer-events-none={recipePrefsSaving}
 						class:opacity-60={recipePrefsSaving}
@@ -126,10 +127,10 @@
 		</section>
 
 		<section class="ui-form-card">
-			<h2 class="ui-section-label mb-3">Recipe imports</h2>
+			<h2 class="ui-section-label mb-3">{m.settings_recipes_imports_heading()}</h2>
 			<div class="flex flex-col gap-4">
 				<div>
-					<span class="ui-field-label mb-1.5 block" id="auto-translate-label">Auto-translate on import</span>
+					<span class="ui-field-label mb-1.5 block" id="auto-translate-label">{m.settings_recipes_autotranslate_label()}</span>
 					<div
 						class:pointer-events-none={recipeTogglesSaving}
 						class:opacity-60={recipeTogglesSaving}
@@ -142,13 +143,12 @@
 						/>
 					</div>
 					<p class="mt-1.5 text-xs text-base-content/50">
-						Translate new recipes to English right after import instead of waiting for the first
-						English view. Counts against the background spend cap.
+						{m.settings_recipes_autotranslate_hint()}
 					</p>
 				</div>
 				<div class="border-t border-base-300 pt-3">
 					<span class="ui-field-label mb-1.5 block" id="cook-mode-pregen-label"
-						>Pre-generate Cook Mode on import</span
+						>{m.settings_recipes_cookmode_pregen_label()}</span
 					>
 					<div
 						class:pointer-events-none={recipeTogglesSaving}
@@ -162,7 +162,7 @@
 						/>
 					</div>
 					<p class="mt-1.5 text-xs text-base-content/50">
-						Build the step-by-step Cook Mode sheet right after import instead of on first open.
+						{m.settings_recipes_cookmode_pregen_hint()}
 					</p>
 				</div>
 			</div>

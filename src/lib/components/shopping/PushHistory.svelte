@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
+	import { m } from '$lib/paraglide/messages';
 	import { APP_TIME_ZONE } from '$lib/week';
 
 	// Row types derive from the shopping route's server load (via the generated
@@ -33,21 +34,24 @@
 		if (item.mode === 'product' && item.ahProductName) {
 			return `${item.sourceName} → ${item.ahProductName}${item.quantity && item.quantity > 1 ? ` ×${item.quantity}` : ''}`;
 		}
-		if (item.mode === 'freetext') return `${item.sourceName} as text`;
-		return `${item.sourceName} skipped`;
+		if (item.mode === 'freetext') return m.shopping_pushhistory_as_text({ source: item.sourceName });
+		return m.shopping_pushhistory_item_skipped({ source: item.sourceName });
 	}
 </script>
 
 {#if pushHistory.length}
 	<section class="mt-4">
-		<h2 class="ui-section-label mb-2">Sent to AH</h2>
+		<h2 class="ui-section-label mb-2">{m.shopping_sent_to_ah_heading()}</h2>
 		<div class="ui-list-card divide-y divide-base-200">
 			{#each pushHistory as push}
 				<article class="px-3 py-3">
 					<div class="flex items-start justify-between gap-3">
 						<div class="min-w-0">
 							<p class="text-sm font-semibold">
-								{push.productsPushed + push.freetextPushed} sent to {push.destination === 'order' ? 'order' : 'list'}
+								{m.shopping_pushhistory_sent_count({
+									count: push.productsPushed + push.freetextPushed,
+									destination: push.destination === 'order' ? m.shopping_ah_destination_order() : m.shopping_ah_destination_list()
+								})}
 							</p>
 							<p class="mt-0.5 text-xs text-base-content/45">
 								{formatPushTime(push.createdAt)}{push.accountName ? ` · ${push.accountName}` : ''}
@@ -56,8 +60,8 @@
 						{#if push.failedCount || push.skippedCount}
 							<span class="ui-chip-muted shrink-0">
 								{[
-									push.failedCount ? `${push.failedCount} failed` : '',
-									push.skippedCount ? `${push.skippedCount} skipped` : ''
+									push.failedCount ? m.shopping_pushhistory_failed_count({ count: push.failedCount }) : '',
+									push.skippedCount ? m.shopping_pushhistory_skipped_count({ count: push.skippedCount }) : ''
 								]
 									.filter(Boolean)
 									.join(' · ')}
@@ -79,7 +83,7 @@
 							</li>
 						{/each}
 						{#if push.items.length > 5}
-							<li class="text-base-content/40">+{push.items.length - 5} more</li>
+							<li class="text-base-content/40">{m.shopping_pushhistory_more({ count: push.items.length - 5 })}</li>
 						{/if}
 					</ul>
 				</article>

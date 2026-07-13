@@ -6,6 +6,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
+	import { m } from '$lib/paraglide/messages';
 	import { toast } from '$lib/stores/toast.svelte';
 	import type { ShoppingListItem } from './types';
 
@@ -44,7 +45,7 @@
 			addAmount = '';
 			addUnit = '';
 		} catch {
-			toast.error('Could not add the item.');
+			toast.error(m.shopping_toast_add_failed());
 		} finally {
 			addSubmitting = false;
 		}
@@ -62,8 +63,8 @@
 		<input
 			type="text"
 			class="input input-bordered input-sm min-w-0 flex-1"
-			placeholder="Add an item..."
-			aria-label="Item name"
+			placeholder={m.shopping_additem_name_placeholder()}
+			aria-label={m.shopping_additem_name_aria()}
 			autocomplete="off"
 			bind:value={addName}
 		/>
@@ -71,16 +72,16 @@
 			type="text"
 			inputmode="decimal"
 			class="input input-bordered input-sm w-14"
-			placeholder="Qty"
-			aria-label="Quantity"
+			placeholder={m.shopping_additem_qty_placeholder()}
+			aria-label={m.shopping_additem_qty_aria()}
 			autocomplete="off"
 			bind:value={addAmount}
 		/>
 		<input
 			type="text"
 			class="input input-bordered input-sm w-14"
-			placeholder="Unit"
-			aria-label="Unit"
+			placeholder={m.shopping_additem_unit_placeholder()}
+			aria-label={m.shopping_additem_unit_aria()}
 			autocomplete="off"
 			bind:value={addUnit}
 		/>
@@ -88,7 +89,7 @@
 			type="submit"
 			class="btn btn-outline btn-sm btn-square shrink-0"
 			disabled={addSubmitting || !addName.trim()}
-			aria-label="Add item"
+			aria-label={m.shopping_additem_submit_aria()}
 		>
 			{#if addSubmitting}
 				<span class="loading loading-spinner loading-xs"></span>

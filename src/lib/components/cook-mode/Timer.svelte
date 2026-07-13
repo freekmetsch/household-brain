@@ -25,6 +25,7 @@
 -->
 <script lang="ts">
 	import { draggable, type DragEventData, type DragOptions } from '@neodrag/svelte';
+	import { m } from '$lib/paraglide/messages';
 	import { fmtClock } from './palette';
 
 	type Props = {
@@ -136,7 +137,7 @@
 		</span>
 
 		<span class="text-2xl font-bold font-mono tabular-nums py-2 self-center cursor-grab active:cursor-grabbing">
-			{done ? 'Done' : fmtClock(remaining)}
+			{done ? m.cookmode_timer_done_label() : fmtClock(remaining)}
 		</span>
 
 		{#if !minimized}
@@ -165,7 +166,7 @@
 				type="button"
 				class="timer-no-drag w-9 h-9 rounded-full bg-white/15 text-white text-sm hover:bg-white/25 active:scale-95"
 				onclick={() => (minimized = !minimized)}
-				aria-label={minimized ? 'Expand timer' : 'Minimize timer'}
+				aria-label={minimized ? m.cookmode_timer_expand_aria() : m.cookmode_timer_minimize_aria()}
 			>
 				{minimized ? '▣' : '–'}
 			</button>
@@ -173,7 +174,7 @@
 				type="button"
 				class="timer-no-drag w-9 h-9 rounded-full bg-white/15 text-white text-sm hover:bg-white/25 active:scale-95"
 				onclick={onDismiss}
-				aria-label={done ? 'Dismiss timer' : 'Cancel timer'}
+				aria-label={done ? m.cookmode_dismiss_timer_aria() : m.cookmode_cancel_timer_aria()}
 			>
 				✕
 			</button>

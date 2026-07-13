@@ -3,6 +3,7 @@
 	import { fly } from 'svelte/transition';
 	import { base } from '$app/paths';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
+	import { m } from '$lib/paraglide/messages';
 	import type { IconName } from '$lib/components/ui/icons/paths';
 	import type { ToolDisplay } from '$lib/tool_display';
 	import { looksLikeJsonArtifact, ARTIFACT_FALLBACK } from '$lib/chat_sanitize';
@@ -115,26 +116,26 @@
 		attachError = '';
 		for (const file of files) {
 			if (attachments.length >= MAX_IMAGES) {
-				attachError = `Up to ${MAX_IMAGES} photos at a time.`;
+				attachError = m.chat_attach_max_photos({ max: MAX_IMAGES });
 				break;
 			}
 			if (!ALLOWED_MIME.has(file.type)) {
-				attachError = 'Photos only (JPG, PNG, WEBP, GIF).';
+				attachError = m.chat_attach_invalid_type();
 				continue;
 			}
 			if (file.size > MAX_INPUT_BYTES) {
-				attachError = 'That photo is too large.';
+				attachError = m.chat_attach_too_large();
 				continue;
 			}
 			try {
 				const blob = await downscaleToJpeg(file);
 				if (blob.size > MAX_UPLOAD_BYTES) {
-					attachError = 'That photo is too large.';
+					attachError = m.chat_attach_too_large();
 					continue;
 				}
 				attachments.push({ id: attachId++, blob, url: URL.createObjectURL(blob), name: file.name });
 			} catch {
-				attachError = "Couldn't read that photo — try a clearer shot.";
+				attachError = m.chat_attach_read_failed();
 			}
 		}
 	}
@@ -163,10 +164,10 @@
 		| { kind: 'ai'; label: string; prompt: string };
 
 	const QUICK_CHIPS: QuickChip[] = [
-		{ kind: 'nav', label: 'Shopping list', href: `${base}/shopping`, icon: 'cart' },
-		{ kind: 'nav', label: 'Meal plan', href: `${base}/meal-plan`, icon: 'calendar' },
-		{ kind: 'ai', label: "What's in the freezer?", prompt: "What's in the freezer?" },
-		{ kind: 'ai', label: 'Add to freezer', prompt: 'Add to freezer' }
+		{ kind: 'nav', label: m.chat_chip_shopping_list(), href: `${base}/shopping`, icon: 'cart' },
+		{ kind: 'nav', label: m.chat_chip_meal_plan(), href: `${base}/meal-plan`, icon: 'calendar' },
+		{ kind: 'ai', label: m.chat_chip_freezer_question(), prompt: m.chat_chip_freezer_question() },
+		{ kind: 'ai', label: m.chat_chip_add_freezer(), prompt: m.chat_chip_add_freezer() }
 	];
 
 	// Stick-to-bottom scrolling: streaming keeps the view pinned only while the
@@ -224,8 +225,8 @@
 		const day = new Date(d);
 		day.setHours(0, 0, 0, 0);
 		const diff = Math.round((today.getTime() - day.getTime()) / 86400000);
-		if (diff <= 0) return 'Today';
-		if (diff === 1) return 'Yesterday';
+		if (diff <= 0) return m.chat_day_today();
+		if (diff === 1) return m.chat_day_yesterday();
 		return day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 	}
 
@@ -239,9 +240,9 @@
 
 	function greeting(): string {
 		const h = new Date().getHours();
-		const part = h < 6 ? 'evening' : h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+		const part = h < 6 ? m.chat_greeting_evening() : h < 12 ? m.chat_greeting_morning() : h < 18 ? m.chat_greeting_afternoon() : m.chat_greeting_evening();
 		const name = username ? `, ${displayName(username)}` : '';
-		return `Good ${part}${name}`;
+		return `${part}${name}`;
 	}
 
 	function firstUndoableOp(tool: ToolCall): number | null {
@@ -372,7 +373,7 @@
 
 			if (!res.ok || !res.body) {
 				const last = messages.at(-1)!;
-				last.error = 'Something went wrong — try again.';
+				last.error = m.chat_error_generic();
 				last.streaming = false;
 				return;
 			}
@@ -446,9 +447,9 @@
 					} else if (event.type === 'error') {
 						if (event.code === 'cap_exceeded') {
 							capExceeded = true;
-							last.error = 'AI is paused for today (€0.50 daily limit reached). Try again tomorrow.';
+							last.error = m.chat_cap_error();
 						} else {
-							last.error = event.message ?? 'Something went wrong.';
+							last.error = event.message ?? m.chat_error_generic_short();
 						}
 					}
 				}
@@ -458,9 +459,9 @@
 			if ((err as Error).name === 'AbortError') {
 				// User pressed Stop before anything arrived — mark it so the bubble
 				// isn't just blank (Retry picks it up from here).
-				if (last && !last.content && !last.toolCalls?.length) last.error = 'Stopped.';
+				if (last && !last.content && !last.toolCalls?.length) last.error = m.chat_error_stopped();
 			} else if (last && !last.error) {
-				last.error = 'Connection lost — check your internet and retry.';
+				last.error = m.chat_error_connection_lost();
 			}
 		} finally {
 			isStreaming = false;
@@ -476,7 +477,9 @@
 						t.pending = false;
 						t.display = {
 							kind: 'error',
-							summary: `${(t.display?.summary ?? 'Working').replace(/…$/, '')} — interrupted`
+							summary: m.chat_tool_interrupted({
+								summary: (t.display?.summary ?? m.chat_tool_working_fallback()).replace(/…$/, '')
+							})
 						};
 					}
 				}
@@ -527,7 +530,7 @@
 		{#if messages.length === 0}
 			<div class="flex flex-col items-center justify-center h-full text-center pt-16 pb-8 gap-1.5">
 				<p class="text-lg font-medium text-base-content/80">{greeting()}</p>
-				<p class="text-sm text-base-content/45">Ask about meals, the freezer, or what to buy.</p>
+				<p class="text-sm text-base-content/45">{m.chat_empty_hint()}</p>
 			</div>
 		{/if}
 
@@ -620,16 +623,16 @@
 												{#if !tool.undo}
 													<button class="btn btn-ghost btn-xs h-6 min-h-6 px-1.5 text-xs opacity-70 hover:opacity-100" onclick={() => undo(tool, opId)}>
 														<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 015 5v1M3 10l4-4M3 10l4 4" /></svg>
-														Undo
+														{m.chat_tool_undo_button()}
 													</button>
 												{:else if tool.undo === 'undoing'}
-													<span class="text-xs opacity-60 inline-flex items-center gap-1"><span class="loading loading-spinner loading-xs"></span> Undoing…</span>
+													<span class="text-xs opacity-60 inline-flex items-center gap-1"><span class="loading loading-spinner loading-xs"></span> {m.chat_tool_undoing_label()}</span>
 												{:else if tool.undo === 'done'}
-													<span class="text-xs opacity-50">Undone</span>
+													<span class="text-xs opacity-50">{m.chat_tool_undone_label()}</span>
 												{:else if tool.undo === 'conflict'}
-													<span class="text-xs text-warning">Changed since — flagged for review instead</span>
+													<span class="text-xs text-warning">{m.chat_tool_undo_conflict()}</span>
 												{:else}
-													<span class="text-xs text-error">Undo failed</span>
+													<span class="text-xs text-error">{m.chat_tool_undo_failed()}</span>
 												{/if}
 											</div>
 										{/if}
@@ -637,23 +640,23 @@
 										{#if d.kind === 'confirm'}
 											<div class="pl-5">
 												{#if msg.hydrated || tool.confirmState === 'expired'}
-													<span class="text-xs opacity-50 italic">Approval was requested — ask again to act on it</span>
+													<span class="text-xs opacity-50 italic">{m.chat_confirm_expired_hydrated()}</span>
 												{:else if tool.confirmState === 'cancelled'}
-													<span class="text-xs opacity-50">Cancelled</span>
+													<span class="text-xs opacity-50">{m.chat_confirm_cancelled()}</span>
 												{:else if tool.confirmState === 'conflict'}
-													<span class="text-xs text-warning">Changed since — nothing was done</span>
+													<span class="text-xs text-warning">{m.chat_confirm_conflict()}</span>
 												{:else if tool.confirmState === 'error'}
-													<span class="text-xs text-error">Couldn't apply — try again</span>
+													<span class="text-xs text-error">{m.chat_confirm_error()}</span>
 												{:else if tool.confirmState === 'approving'}
-													<span class="text-xs opacity-60 inline-flex items-center gap-1"><span class="loading loading-spinner loading-xs"></span> Applying…</span>
+													<span class="text-xs opacity-60 inline-flex items-center gap-1"><span class="loading loading-spinner loading-xs"></span> {m.chat_confirm_applying_label()}</span>
 												{:else}
 													<div class="flex gap-1.5">
 														<button
 															class="btn btn-primary btn-xs h-6 min-h-6"
 															disabled={!d.confirmationId}
 															onclick={() => d.confirmationId && approveConfirm(tool, d.confirmationId)}
-														>Approve</button>
-														<button class="btn btn-ghost btn-xs h-6 min-h-6 opacity-70" onclick={() => cancelConfirm(tool)}>Cancel</button>
+														>{m.chat_confirm_approve_button()}</button>
+														<button class="btn btn-ghost btn-xs h-6 min-h-6 opacity-70" onclick={() => cancelConfirm(tool)}>{m.chat_confirm_cancel_button()}</button>
 													</div>
 												{/if}
 											</div>
@@ -678,7 +681,7 @@
 						{#if canRetry(msg, mi)}
 							<button class="btn btn-xs btn-outline btn-warning mt-2 h-6 min-h-6 gap-1" onclick={retry}>
 								<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-								Retry
+								{m.mealplan_retry_button()}
 							</button>
 						{/if}
 					{/if}
@@ -691,8 +694,8 @@
 			<button
 				class="btn btn-circle btn-sm absolute bottom-3 left-1/2 -translate-x-1/2 border border-base-300 bg-base-100 text-base-content/70 shadow-md hover:bg-base-200"
 				onclick={jumpToBottom}
-				title="Jump to latest"
-				aria-label="Jump to latest"
+				title={m.chat_jump_to_latest_aria()}
+				aria-label={m.chat_jump_to_latest_aria()}
 				transition:fly={{ y: 6, duration: motionMs }}
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
@@ -703,7 +706,7 @@
 	<!-- Daily cap banner -->
 	{#if capExceeded}
 		<div class="mx-3 mb-2 alert alert-warning text-sm py-2">
-			<span>AI daily limit reached (€0.50). Resets at midnight.</span>
+			<span>{m.chat_cap_banner()}</span>
 		</div>
 	{/if}
 
@@ -742,8 +745,8 @@
 						<button
 							class="btn btn-circle btn-xs btn-neutral absolute -right-1.5 -top-1.5 h-5 min-h-5 w-5 shadow"
 							onclick={() => removeAttachment(att.id)}
-							title="Remove photo"
-							aria-label="Remove photo"
+							title={m.recipes_header_remove_photo()}
+							aria-label={m.recipes_header_remove_photo()}
 						>
 							<svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
 						</button>
@@ -769,8 +772,8 @@
 				class="btn btn-square btn-ghost btn-sm h-10 min-h-0 w-10"
 				disabled={isStreaming || capExceeded || attachments.length >= MAX_IMAGES}
 				onclick={() => fileInput?.click()}
-				title="Attach a photo"
-				aria-label="Attach a photo"
+				title={m.chat_attach_photo_aria()}
+				aria-label={m.chat_attach_photo_aria()}
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -780,7 +783,7 @@
 			<textarea
 				bind:this={textareaEl}
 				class="textarea textarea-bordered flex-1 resize-none text-sm min-h-[2.5rem] max-h-32 leading-snug"
-				placeholder="Ask a question…"
+				placeholder={m.chat_composer_placeholder()}
 				rows="1"
 				disabled={isStreaming || capExceeded}
 				bind:value={input}
@@ -793,7 +796,7 @@
 			></textarea>
 
 			{#if isStreaming}
-				<button class="btn btn-square btn-error btn-sm h-10 min-h-0 w-10" onclick={abort} title="Stop">
+				<button class="btn btn-square btn-error btn-sm h-10 min-h-0 w-10" onclick={abort} title={m.chat_stop_button_title()}>
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
 						<rect x="6" y="6" width="12" height="12" rx="1" />
 					</svg>
@@ -803,7 +806,7 @@
 					class="btn btn-square btn-primary btn-sm h-10 min-h-0 w-10"
 					disabled={(!input.trim() && attachments.length === 0) || capExceeded}
 					onclick={() => send(input)}
-					title="Send"
+					title={m.chat_send_button_title()}
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m-7 7l7-7 7 7" />

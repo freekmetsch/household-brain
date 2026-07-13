@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import SettingsPanelHeader from '$lib/components/settings/SettingsPanelHeader.svelte';
+	import { m } from '$lib/paraglide/messages';
 	import { toast } from '$lib/stores/toast.svelte';
 	import type { PageData } from './$types';
 
@@ -15,7 +16,7 @@
 	async function changePassword() {
 		pwdError = '';
 		if (newPwd !== confirmPwd) {
-			pwdError = 'Passwords do not match';
+			pwdError = m.settings_account_password_mismatch();
 			toast.error(pwdError);
 			return;
 		}
@@ -28,16 +29,16 @@
 			});
 			const body = await res.json();
 			if (!res.ok) {
-				pwdError = body.error ?? 'Could not change password';
+				pwdError = body.error ?? m.settings_account_change_password_failed();
 				toast.error(pwdError);
 			} else {
 				currentPwd = '';
 				newPwd = '';
 				confirmPwd = '';
-				toast.success('Password changed');
+				toast.success(m.settings_account_password_changed());
 			}
 		} catch {
-			pwdError = 'Connection error';
+			pwdError = m.settingsshell_toast_connection_error();
 			toast.error(pwdError);
 		} finally {
 			pwdLoading = false;
@@ -46,18 +47,18 @@
 </script>
 
 <svelte:head>
-	<title>Account - Settings</title>
+	<title>{m.settings_account_title()}</title>
 </svelte:head>
 
 <div class="ui-page-shell px-4 pt-4">
-	<SettingsPanelHeader title="Account" />
+	<SettingsPanelHeader title={m.settingsshell_panel_account()} />
 
 	<div class="flex flex-col gap-5">
 		<section class="ui-form-card">
-			<h2 class="ui-section-label mb-3">Password</h2>
-			<p class="mb-3 text-xs text-base-content/50">Signed in as {data.username}</p>
+			<h2 class="ui-section-label mb-3">{m.settings_account_password_heading()}</h2>
+			<p class="mb-3 text-xs text-base-content/50">{m.settings_account_signed_in_as({ username: data.username })}</p>
 			<form class="flex flex-col gap-2" onsubmit={(e) => { e.preventDefault(); void changePassword(); }}>
-				<label class="ui-field-label" for="current-password">Current password</label>
+				<label class="ui-field-label" for="current-password">{m.settings_account_current_password_label()}</label>
 				<input
 					id="current-password"
 					type="password"
@@ -66,7 +67,7 @@
 					autocomplete="current-password"
 					required
 				/>
-				<label class="ui-field-label" for="new-password">New password</label>
+				<label class="ui-field-label" for="new-password">{m.settings_account_new_password_label()}</label>
 				<input
 					id="new-password"
 					type="password"
@@ -76,7 +77,7 @@
 					required
 					minlength="8"
 				/>
-				<label class="ui-field-label" for="confirm-password">Repeat new password</label>
+				<label class="ui-field-label" for="confirm-password">{m.settings_account_confirm_password_label()}</label>
 				<input
 					id="confirm-password"
 					type="password"
@@ -90,11 +91,11 @@
 					<p class="text-sm text-error" role="alert">{pwdError}</p>
 				{/if}
 				<button class="btn btn-sm btn-primary mt-1" type="submit" disabled={pwdLoading}>
-					{pwdLoading ? 'Saving...' : 'Update password'}
+					{pwdLoading ? m.settings_account_saving_label() : m.settings_account_update_password_button()}
 				</button>
 			</form>
 		</section>
 
-		<a href="{base}/logout" class="btn btn-sm btn-ghost w-full text-error">Log out</a>
+		<a href="{base}/logout" class="btn btn-sm btn-ghost w-full text-error">{m.settings_account_logout_button()}</a>
 	</div>
 </div>

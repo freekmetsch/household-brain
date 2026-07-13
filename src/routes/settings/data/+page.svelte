@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import SettingsPanelHeader from '$lib/components/settings/SettingsPanelHeader.svelte';
 	import BottomSheet from '$lib/components/ui/BottomSheet.svelte';
+	import { m } from '$lib/paraglide/messages';
 	import { toast } from '$lib/stores/toast.svelte';
 	import type { PageData } from './$types';
 
@@ -22,9 +23,9 @@
 			a.download = `household-brain-export-${new Date().toISOString().slice(0, 10)}.json`;
 			a.click();
 			URL.revokeObjectURL(url);
-			toast.success('Export ready');
+			toast.success(m.settings_data_export_ready());
 		} catch {
-			toast.error('Could not export data.');
+			toast.error(m.settings_data_export_failed());
 		} finally {
 			exportLoading = false;
 		}
@@ -56,16 +57,16 @@
 			});
 			const body = await res.json();
 			if (!res.ok || !body.ok) {
-				importError = body.error ?? 'Import failed.';
+				importError = body.error ?? m.settings_data_import_failed();
 				toast.error(importError);
 			} else {
-				toast.success('Import complete');
+				toast.success(m.settings_data_import_complete());
 				importFile = null;
 				if (importFileInput) importFileInput.value = '';
 				await invalidateAll();
 			}
 		} catch {
-			importError = 'Connection error.';
+			importError = m.settings_data_connection_error();
 			toast.error(importError);
 		} finally {
 			importLoading = false;
@@ -100,14 +101,14 @@
 			});
 			const body = await res.json();
 			if (!res.ok || !body.ok) {
-				resetError = body.error ?? 'Reset failed.';
+				resetError = body.error ?? m.settings_data_reset_failed();
 			} else {
-				toast.success(`${resetTarget.label} reset`);
+				toast.success(m.settings_data_reset_success({ label: resetTarget.label }));
 				resetOpen = false;
 				await invalidateAll();
 			}
 		} catch {
-			resetError = 'Connection error.';
+			resetError = m.settings_data_connection_error();
 		} finally {
 			resetLoading = false;
 		}
@@ -115,15 +116,15 @@
 </script>
 
 <svelte:head>
-	<title>Data - Settings</title>
+	<title>{m.settings_data_title()}</title>
 </svelte:head>
 
 <div class="ui-page-shell px-4 pt-4">
-	<SettingsPanelHeader title="Data" />
+	<SettingsPanelHeader title={m.settingsshell_panel_data()} />
 
 	<div class="flex flex-col gap-5">
 		<section class="ui-form-card">
-			<h2 class="ui-section-label mb-3">Export</h2>
+			<h2 class="ui-section-label mb-3">{m.settings_data_export_heading()}</h2>
 			<button
 				type="button"
 				class="btn btn-sm btn-outline w-full"
@@ -133,16 +134,15 @@
 				{#if exportLoading}
 					<span class="loading loading-spinner loading-xs"></span>
 				{/if}
-				Export as JSON
+				{m.settings_data_export_button()}
 			</button>
 		</section>
 
 		<section class="ui-form-card">
-			<h2 class="ui-section-label mb-3">Import</h2>
+			<h2 class="ui-section-label mb-3">{m.settings_data_import_heading()}</h2>
 			<p class="mb-3 text-xs text-base-content/50">
 				{#if data.importEligible}
-					Restore recipes, inventory, and the meal plan/log from a previous export. Only works on
-					an empty database.
+					{m.settings_data_import_desc()}
 				{:else}
 					{data.importIneligibleReason}
 				{/if}
@@ -161,7 +161,7 @@
 				disabled={!data.importEligible || importLoading}
 				onclick={() => importFileInput?.click()}
 			>
-				{importFile ? importFile.name : 'Choose export file'}
+				{importFile ? importFile.name : m.settings_data_choose_file_button()}
 			</button>
 			{#if importError}
 				<p class="mt-2 text-sm text-error" role="alert">{importError}</p>
@@ -175,14 +175,14 @@
 				{#if importLoading}
 					<span class="loading loading-spinner loading-xs"></span>
 				{/if}
-				Import
+				{m.settings_data_import_button()}
 			</button>
 		</section>
 
 		<section class="ui-form-card">
-			<h2 class="ui-section-label mb-3">Reset data</h2>
+			<h2 class="ui-section-label mb-3">{m.settings_data_reset_heading()}</h2>
 			<p class="mb-3 text-xs text-base-content/50">
-				Permanently deletes the selected group. This cannot be undone.
+				{m.settings_data_reset_desc()}
 			</p>
 			<div class="flex flex-col divide-y divide-base-300">
 				{#each data.resetGroups as group (group.key)}
@@ -199,7 +199,7 @@
 								disabled={group.count === 0}
 								onclick={() => openReset(group)}
 							>
-								Reset
+								{m.settingsshell_reset_button()}
 							</button>
 						</div>
 					</div>
@@ -212,9 +212,11 @@
 <BottomSheet bind:open={resetOpen} title={resetTarget?.label} onclose={() => (resetTarget = null)}>
 	{#if resetTarget}
 		<p class="mb-3 text-sm text-base-content/70">
-			This permanently deletes <strong>{resetTarget.count}</strong>
-			row{resetTarget.count === 1 ? '' : 's'} from {resetTarget.label}. Type
-			<strong>{resetTarget.label}</strong> to confirm.
+			{#if resetTarget.count === 1}
+				{m.settings_data_reset_confirm_body_singular({ count: resetTarget.count, label: resetTarget.label })}
+			{:else}
+				{m.settings_data_reset_confirm_body_plural({ count: resetTarget.count, label: resetTarget.label })}
+			{/if}
 		</p>
 		<input
 			type="text"
@@ -230,7 +232,7 @@
 		{/if}
 		<div class="mt-4 flex gap-2">
 			<button type="button" class="btn btn-ghost btn-sm flex-1" onclick={() => (resetOpen = false)}>
-				Cancel
+				{m.settings_data_cancel_button()}
 			</button>
 			<button
 				type="button"
@@ -239,7 +241,7 @@
 				onclick={confirmReset}
 			>
 				{#if resetLoading}<span class="loading loading-spinner loading-xs"></span>{/if}
-				Delete
+				{m.settings_data_delete_button()}
 			</button>
 		</div>
 	{/if}

@@ -15,6 +15,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { onDestroy, untrack } from 'svelte';
+	import { m } from '$lib/paraglide/messages';
 	import type { BenchSheetRating, CookModeRecipe, CookModeStep } from '$lib/types';
 	import ComponentCard from './cook-mode/ComponentCard.svelte';
 	import MergeCard from './cook-mode/MergeCard.svelte';
@@ -439,14 +440,14 @@
 					adoptCookMode(body.cookMode);
 				}
 			} else if (body.reason === 'daily_cap_exceeded') {
-				loadError = 'Daily AI budget reached. Cook-mode rewrite paused until tomorrow.';
+				loadError = m.benchsheet_error_budget_reached();
 			} else if (body.reason === 'no_directions') {
-				loadError = 'This recipe has no directions to rewrite.';
+				loadError = m.benchsheet_error_no_directions();
 			} else {
-				loadError = body.message ?? 'Could not load cook mode.';
+				loadError = body.message ?? m.benchsheet_error_load_failed();
 			}
 		} catch {
-			loadError = 'Connection failed.';
+			loadError = m.benchsheet_error_connection_failed();
 		}
 		loading = false;
 		regenerating = false;
@@ -700,15 +701,15 @@
 			role="status"
 		>
 			<div class="min-w-0 flex-1">
-				<p class="text-[13px] font-medium">Bench sheet is ready.</p>
+				<p class="text-[13px] font-medium">{m.benchsheet_ready_title()}</p>
 				<p class="text-[11px] text-base-content/60 leading-snug">
-					Kept the raw view so your running timer isn't lost.
+					{m.benchsheet_ready_desc()}
 				</p>
 			</div>
 			<button
 				type="button"
 				class="btn btn-xs btn-success shrink-0"
-				onclick={() => pendingCookMode && adoptCookMode(pendingCookMode)}>Switch</button
+				onclick={() => pendingCookMode && adoptCookMode(pendingCookMode)}>{m.benchsheet_switch_button()}</button
 			>
 		</div>
 	{:else}
@@ -719,12 +720,11 @@
 			<span class="loading loading-spinner loading-sm text-primary shrink-0"></span>
 			<div class="min-w-0 flex-1">
 				<p class="text-[13px] font-medium">
-					{regenerating ? 'Refreshing bench sheet…' : 'Writing your bench sheet…'}
+					{regenerating ? m.benchsheet_refreshing_label() : m.benchsheet_writing_label()}
 					<span class="tabular-nums text-base-content/50">{formatElapsed(genElapsedSec)}</span>
 				</p>
 				<p class="text-[11px] text-base-content/60 leading-snug">
-					Usually ready within a minute or two. Safe to leave — it keeps working in the
-					background. The raw recipe is below meanwhile.
+					{m.benchsheet_writing_hint_with_raw()}
 				</p>
 			</div>
 		</div>
@@ -742,10 +742,10 @@
 	<div class="flex flex-col items-center justify-center gap-3 text-center p-5 min-h-[40vh]">
 		<span class="loading loading-spinner loading-lg"></span>
 		<p class="text-sm text-base-content/70">
-			{regenerating ? 'Refreshing bench sheet…' : 'Writing your bench sheet…'}
+			{regenerating ? m.benchsheet_refreshing_label() : m.benchsheet_writing_label()}
 			<span class="tabular-nums">{formatElapsed(genElapsedSec)}</span>
 		</p>
-		<p class="text-xs text-base-content/50">Safe to leave — it keeps working in the background.</p>
+		<p class="text-xs text-base-content/50">{m.benchsheet_writing_hint_simple()}</p>
 	</div>
 {:else if aiPausedReason}
 	<RawDirectionsFallback
@@ -755,13 +755,13 @@
 		notes={fallback.notes}
 		viewLang={fallback.viewLang}
 		servings={fallback.servings}
-		bannerMessage="Bench-sheet rewrite paused — {aiPausedReason} Showing the raw recipe so you can still cook."
+		bannerMessage={m.benchsheet_paused_banner({ reason: aiPausedReason })}
 		onRetry={() => loadCookMode(true)}
 	/>
 {:else if loadError}
 	<div class="flex flex-col items-center justify-center gap-3 text-center p-5 min-h-[40vh]">
 		<p class="text-sm">{loadError}</p>
-		<button class="btn btn-sm btn-primary" onclick={() => loadCookMode(false)}>Try again</button>
+		<button class="btn btn-sm btn-primary" onclick={() => loadCookMode(false)}>{m.benchsheet_try_again_button()}</button>
 	</div>
 {:else if cookMode}
 	{#if notificationPrimerVisible}
@@ -770,18 +770,17 @@
 			role="status"
 		>
 			<span class="flex-1 leading-snug">
-				Allow notifications so timers ring even if you swipe away briefly. Sound and vibration always
-				work in the cook view.
+				{m.benchsheet_notif_primer_desc()}
 			</span>
 			<button
 				type="button"
 				class="btn btn-xs btn-warning shrink-0"
-				onclick={acceptNotifications}>Allow</button
+				onclick={acceptNotifications}>{m.benchsheet_notif_allow_button()}</button
 			>
 			<button
 				type="button"
 				class="btn btn-xs btn-ghost shrink-0"
-				onclick={dismissNotificationPrimer}>Not now</button
+				onclick={dismissNotificationPrimer}>{m.benchsheet_notif_not_now_button()}</button
 			>
 		</div>
 	{/if}
@@ -793,12 +792,14 @@
 				onclick={() => (mepExpanded = !mepExpanded)}
 			>
 				<span class="text-[10px] uppercase tracking-wide font-bold text-base-content/60 shrink-0"
-					>Mise</span
+					>{m.benchsheet_mise_label()}</span
 				>
 				<span class="text-[11px] text-base-content/70 flex-1 min-w-0 truncate">
-					{#if mepExpanded}Tap to collapse{:else}{mepDone}/{mepList.length} ready · {mepList
-							.slice(0, 3)
-							.join(' · ')}{#if mepList.length > 3}…{/if}{/if}
+					{#if mepExpanded}{m.benchsheet_mise_collapse()}{:else}{m.benchsheet_mise_progress({
+							done: mepDone,
+							total: mepList.length,
+							preview: mepList.slice(0, 3).join(' · ') + (mepList.length > 3 ? '…' : '')
+						})}{/if}
 				</span>
 				<span class="text-[10px] text-base-content/40 shrink-0">{mepExpanded ? '▴' : '▾'}</span>
 			</button>
@@ -884,11 +885,11 @@
 		<FixedBottomBar contentClass="mx-auto flex max-w-2xl flex-col gap-2 px-3 py-2">
 			{#if !cookedDone && !ratingDismissed}
 				<div class="flex items-center gap-2">
-					<span class="text-[12px] text-base-content/70 flex-1">How was the bench sheet?</span>
+					<span class="text-[12px] text-base-content/70 flex-1">{m.benchsheet_rating_prompt()}</span>
 					<button
 						type="button"
 						class="btn btn-xs {benchSheetRating === 'good' ? 'btn-success' : 'btn-ghost'} text-base"
-						aria-label="Bench sheet was good"
+						aria-label={m.benchsheet_rating_good_aria()}
 						aria-pressed={benchSheetRating === 'good'}
 						onclick={() => (benchSheetRating = benchSheetRating === 'good' ? null : 'good')}
 					>
@@ -897,7 +898,7 @@
 					<button
 						type="button"
 						class="btn btn-xs {benchSheetRating === 'bad' ? 'btn-error' : 'btn-ghost'} text-base"
-						aria-label="Bench sheet needs work"
+						aria-label={m.benchsheet_rating_bad_aria()}
 						aria-pressed={benchSheetRating === 'bad'}
 						onclick={() => (benchSheetRating = benchSheetRating === 'bad' ? null : 'bad')}
 					>
@@ -909,7 +910,7 @@
 						onclick={() => {
 							benchSheetRating = null;
 							ratingDismissed = true;
-						}}>skip</button
+						}}>{m.benchsheet_rating_skip_button()}</button
 					>
 				</div>
 			{/if}
@@ -918,7 +919,7 @@
 				onclick={markCooked}
 				disabled={cookedSubmitting || cookedDone}
 			>
-				{#if cookedDone}✓ Logged{:else if cookedSubmitting}…{:else}I cooked it{/if}
+				{#if cookedDone}{m.benchsheet_cooked_logged()}{:else if cookedSubmitting}…{:else}{m.benchsheet_cook_button()}{/if}
 			</button>
 		</FixedBottomBar>
 	{/if}

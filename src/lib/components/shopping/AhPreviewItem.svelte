@@ -5,6 +5,7 @@
 	card only reports the user's picks via callbacks.
 -->
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import type { PreviewItem } from '$lib/shopping_ah';
 	import { slide } from 'svelte/transition';
 	import { formatPrice, itemLabel } from './format';
@@ -59,7 +60,7 @@
 		<input
 			type="text"
 			class="input input-sm input-bordered min-w-0 flex-1"
-			placeholder="Search AH for something else..."
+			placeholder={m.shopping_ah_search_placeholder()}
 			autocomplete="off"
 			bind:value={searchTerm}
 		/>
@@ -68,7 +69,7 @@
 			class="btn btn-sm shrink-0"
 			disabled={searching || !(searchTerm ?? '').trim()}
 		>
-			{searching ? 'Searching...' : 'Search'}
+			{searching ? m.shopping_ah_searching_label() : m.shopping_ah_search_button()}
 		</button>
 	</form>
 {/snippet}
@@ -86,7 +87,7 @@
 			class="btn btn-ghost btn-xs shrink-0"
 			onclick={() => onToggleExclude()}
 		>
-			{mode === 'exclude' ? 'Undo' : 'Skip'}
+			{mode === 'exclude' ? m.shopping_ah_undo_button() : m.shopping_ah_skip_button()}
 		</button>
 	</div>
 
@@ -103,7 +104,7 @@
 					{#if sel.salesUnitSize}{sel.salesUnitSize}{/if}
 					{#if sel.unitPrice}<span> · {sel.unitPrice}</span>{/if}
 					{#if sel.qty > 1}<span class="text-base-content/70"> · x{sel.qty}</span>{/if}
-					{#if sel.isPreviouslyBought}<span class="ml-1 text-success">· bought before</span>{/if}
+					{#if sel.isPreviouslyBought}<span class="ml-1 text-success">· {m.shopping_ah_bought_before()}</span>{/if}
 				</div>
 			</div>
 			<div class="shrink-0 text-right">
@@ -121,7 +122,7 @@
 			<div class="ui-chip-active mt-1.5 w-fit border-error/40 bg-error/10 text-error">{sel.bonusMechanism}</div>
 		{/if}
 		{#if item.lowConfidence}
-			<p class="mt-1.5 text-xs text-warning">Not an exact name match -- check this is right.</p>
+			<p class="mt-1.5 text-xs text-warning">{m.shopping_ah_low_confidence()}</p>
 		{/if}
 		<div class="mt-1 flex items-center gap-3 text-xs">
 			{#if item.candidates.length > 1}
@@ -130,19 +131,19 @@
 					class="py-1.5 text-primary"
 					onclick={() => onToggleExpanded()}
 				>
-					{expanded ? 'Hide options' : `Other options (${item.candidates.length - 1})`}
+					{expanded ? m.shopping_ah_hide_options() : m.shopping_ah_other_options({ count: item.candidates.length - 1 })}
 				</button>
 			{/if}
 			<button
 				type="button"
 				class="flex min-h-11 min-w-11 items-center justify-center text-base leading-none {favoriteId === sel.id ? 'text-warning' : 'text-base-content/35'}"
 				aria-pressed={favoriteId === sel.id}
-				aria-label={favoriteId === sel.id ? `Unpin ${sel.name} as favorite` : `Pin ${sel.name} as favorite`}
+				aria-label={favoriteId === sel.id ? m.shopping_ah_unpin_favorite_aria({ name: sel.name }) : m.shopping_ah_pin_favorite_aria({ name: sel.name })}
 				onclick={() => onToggleFavorite(sel, pick)}
 			>
 				{favoriteId === sel.id ? '★' : '☆'}
 			</button>
-			<button type="button" class="py-1.5 text-base-content/50" onclick={() => onDemoteToText()}>Send as text</button>
+			<button type="button" class="py-1.5 text-base-content/50" onclick={() => onDemoteToText()}>{m.shopping_ah_send_as_text()}</button>
 		</div>
 		{#if expanded}
 			<ul class="mt-2 max-h-64 space-y-1 overflow-y-auto border-t border-base-200 pt-2" transition:slide={{ duration: 150 }}>
@@ -164,7 +165,7 @@
 								<span class="block text-xs text-base-content/50">
 									{#if cand.salesUnitSize}{cand.salesUnitSize}{/if}
 									{#if cand.unitPrice} · {cand.unitPrice}{/if}
-									{#if cand.isPreviouslyBought}<span class="text-success"> · bought before</span>{/if}
+									{#if cand.isPreviouslyBought}<span class="text-success"> · {m.shopping_ah_bought_before()}</span>{/if}
 								</span>
 							</span>
 							<span class="shrink-0 text-sm {cand.isBonus ? 'font-semibold text-error' : ''}">
@@ -174,7 +175,7 @@
 						<button
 							type="button"
 							class="btn btn-ghost btn-xs h-11 w-11 shrink-0 px-0 text-base {favoriteId === cand.id ? 'text-warning' : 'text-base-content/30'}"
-							aria-label={favoriteId === cand.id ? `Unpin ${cand.name} as favorite` : `Pin ${cand.name} as favorite`}
+							aria-label={favoriteId === cand.id ? m.shopping_ah_unpin_favorite_aria({ name: cand.name }) : m.shopping_ah_pin_favorite_aria({ name: cand.name })}
 							aria-pressed={favoriteId === cand.id}
 							onclick={() => onToggleFavorite(cand, idx)}
 						>
@@ -188,8 +189,8 @@
 	{:else}
 		<p class="mt-1.5 text-xs text-base-content/60">
 			{item.status === 'unknown'
-				? 'Could not search AH — will be sent as a free-text line.'
-				: 'No product match — try another search word, or it goes as a free-text line.'}
+				? m.shopping_ah_status_unknown()
+				: m.shopping_ah_status_no_match()}
 		</p>
 		{#if item.candidates.length}
 			<button
@@ -197,7 +198,7 @@
 				class="mt-1 text-xs text-primary"
 				onclick={() => onPickProduct(0)}
 			>
-				Use a product instead
+				{m.shopping_ah_use_product_instead()}
 			</button>
 		{/if}
 		{@render ahSearchForm()}

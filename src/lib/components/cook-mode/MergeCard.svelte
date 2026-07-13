@@ -19,6 +19,7 @@
 	    timer chip — same affordances as a sub-action row.
 -->
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import type { CookModeStep } from '$lib/types';
 	import type { BeatPalette } from './palette';
 	import TimerChip from './TimerChip.svelte';
@@ -81,7 +82,7 @@
 				<!-- "From", not "Plate": mid-recipe merges (wet + dry → batter) are
 				     combines, only the final merge is plating. -->
 				<p class="text-[10px] uppercase tracking-wider font-bold text-base-content/50 mb-0.5">
-					<span>From </span>
+					<span>{m.cookmode_merge_from_prefix()}</span>
 					{#each streamNames as name, i}
 						<span class={mergesFromPalettes[i]?.text ?? 'text-base-content/70'}>{name}</span>
 						{#if i < streamNames.length - 1}<span class="text-base-content/40"> + </span>{/if}

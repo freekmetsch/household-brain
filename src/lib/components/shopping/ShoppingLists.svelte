@@ -7,6 +7,7 @@
 <script lang="ts">
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
+	import { m } from '$lib/paraglide/messages';
 	import { flip } from 'svelte/animate';
 	import { crossfade, fade, slide } from 'svelte/transition';
 	import { itemLabel } from './format';
@@ -48,7 +49,7 @@
 
 <section class="mb-4">
 	<div class="mb-2 flex items-center justify-between gap-3">
-		<h2 class="ui-section-label">To buy ({visibleToBuyCount})</h2>
+		<h2 class="ui-section-label">{m.shopping_to_buy_heading({ count: visibleToBuyCount })}</h2>
 		{#if coveredCount}
 			<button
 				type="button"
@@ -56,7 +57,7 @@
 				aria-pressed={showCovered}
 				onclick={() => (showCovered = !showCovered)}
 			>
-				{coveredCount} in stock
+				{m.shopping_in_stock_chip({ count: coveredCount })}
 			</button>
 		{/if}
 	</div>
@@ -76,7 +77,7 @@
 						type="checkbox"
 						class="checkbox checkbox-md shrink-0"
 						checked={item.bought}
-						aria-label={`Mark ${item.name} bought`}
+						aria-label={m.shopping_mark_bought_aria({ name: item.name })}
 						onchange={() => onToggleBought(item)}
 					/>
 					<label for={rowId} class="min-w-0 flex-1 cursor-pointer py-1">
@@ -86,13 +87,13 @@
 								<span class="text-xs text-base-content/50">{itemLabel(item)}</span>
 							{/if}
 							{#if bonusByName[item.name]}
-								<span class="ui-chip-active border-error/40 bg-error/10 text-error">bonus</span>
+								<span class="ui-chip-active border-error/40 bg-error/10 text-error">{m.shopping_bonus_chip()}</span>
 							{/if}
 							{#if item.covered}
-								<span class="ui-chip-muted">in stock</span>
+								<span class="ui-chip-muted">{m.shopping_covered_badge()}</span>
 							{/if}
 							{#if item.staple}
-								<span class="ui-chip-muted text-warning">staple</span>
+								<span class="ui-chip-muted text-warning">{m.shopping_staple_badge()}</span>
 							{/if}
 						</span>
 					</label>
@@ -101,7 +102,7 @@
 							type="button"
 							class="btn btn-ghost btn-sm h-10 min-h-0 w-10 shrink-0 px-0"
 							onclick={() => onDeleteManual(item)}
-							aria-label={`Remove ${item.name}`}
+							aria-label={m.shopping_remove_item_aria({ name: item.name })}
 						>
 							<Icon name="x" />
 						</button>
@@ -111,14 +112,14 @@
 		</ul>
 	{:else}
 		<div in:fade={{ duration: 150 }}>
-			<EmptyState mini title={done.length ? 'All bought 🎉' : 'Stock covers everything'} />
+			<EmptyState mini title={done.length ? m.shopping_empty_all_bought() : m.shopping_empty_stock_covers()} />
 		</div>
 	{/if}
 </section>
 
 {#if done.length}
 	<section class="mb-4">
-		<h2 class="ui-section-label mb-2">In basket ({done.length})</h2>
+		<h2 class="ui-section-label mb-2">{m.shopping_in_basket_heading({ count: done.length })}</h2>
 		<ul class="ui-list-card divide-y divide-base-200">
 			{#each done as item, index (item.name)}
 				{@const rowId = itemDomId('done', index)}
@@ -133,7 +134,7 @@
 						type="checkbox"
 						class="checkbox checkbox-md shrink-0"
 						checked={item.bought}
-						aria-label={`Mark ${item.name} not bought`}
+						aria-label={m.shopping_mark_not_bought_aria({ name: item.name })}
 						onchange={() => onToggleBought(item)}
 					/>
 					<label for={rowId} class="min-w-0 flex-1 cursor-pointer py-1">

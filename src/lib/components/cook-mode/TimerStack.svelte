@@ -9,6 +9,7 @@
 -->
 <script lang="ts">
 	import Timer from './Timer.svelte';
+	import { m } from '$lib/paraglide/messages';
 	import type { CookModeStep } from '$lib/types';
 
 	type Props = {
@@ -50,8 +51,8 @@
 	<div
 		class="fixed right-3 z-[74] rounded-full bg-amber-500/85 text-white text-[11px] font-semibold px-3 py-1 shadow-lg pointer-events-none"
 		style="bottom: calc(4.5rem + env(safe-area-inset-bottom) + {VISIBLE_CAP * 3.75}rem);"
-		aria-label="{overflowCount} more timers"
+		aria-label={m.cookmode_timerstack_more_aria({ count: overflowCount })}
 	>
-		+{overflowCount} more
+		{m.cookmode_timerstack_more_label({ count: overflowCount })}
 	</div>
 {/if}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import { m } from '$lib/paraglide/messages';
 	import AddItemForm from '$lib/components/shopping/AddItemForm.svelte';
 	import AhSheet from '$lib/components/shopping/AhSheet.svelte';
 	import PushHistory from '$lib/components/shopping/PushHistory.svelte';
@@ -45,12 +46,12 @@
 	let emptyCopy = $derived(
 		data.emptyState === 'no_meals'
 			? {
-					title: 'No meals planned yet',
-					description: 'Plan meals first and this list will fill itself from the recipes.'
+					title: m.shopping_empty_no_meals_title(),
+					description: m.shopping_empty_no_meals_desc()
 				}
 			: {
-					title: 'Nothing needed',
-					description: 'The planned recipes are covered by stock, or do not need shopping items.'
+					title: m.shopping_empty_nothing_title(),
+					description: m.shopping_empty_nothing_desc()
 				}
 	);
 
@@ -74,7 +75,7 @@
 				item.bought = !newBought;
 				items = [...items];
 			},
-			'Could not update the shopping item.'
+			m.shopping_toast_toggle_failed()
 		);
 	}
 
@@ -102,7 +103,7 @@
 				{ ...item, bought: false, manual: true, covered: false }
 			];
 		} catch {
-			toast.error('Could not restore the item.');
+			toast.error(m.shopping_toast_restore_failed());
 		}
 	}
 
@@ -117,9 +118,9 @@
 			() => {
 				items = before;
 			},
-			'Could not remove the item.'
+			m.shopping_toast_remove_failed()
 		);
-		if (ok) toast.undo(`Removed ${item.name}`, () => void restoreManual(item));
+		if (ok) toast.undo(m.shopping_toast_removed({ name: item.name }), () => void restoreManual(item));
 	}
 
 	// The AH push marked these items bought server-side; mirror it locally.
@@ -129,12 +130,12 @@
 </script>
 
 <svelte:head>
-	<title>Shopping · Household Brain</title>
+	<title>{m.shopping_title()}</title>
 </svelte:head>
 
 <div class="ui-page-shell px-4 py-4">
 	<header class="mb-3 flex items-center justify-between gap-3">
-		<h1 class="min-w-0 text-2xl font-semibold leading-tight">Shopping</h1>
+		<h1 class="min-w-0 text-2xl font-semibold leading-tight">{m.shopping_heading()}</h1>
 		<button
 			type="button"
 			class="btn btn-primary btn-sm shrink-0 gap-1.5"
@@ -142,7 +143,7 @@
 			disabled={visibleToBuyCount === 0}
 		>
 			<Icon name="cart" />
-			Review AH order
+			{m.shopping_review_ah_order()}
 		</button>
 	</header>
 
@@ -153,8 +154,8 @@
 			<div class="flex items-start gap-2">
 				<Icon name="warn" class="mt-0.5 h-4 w-4 shrink-0 text-warning" />
 				<span class="text-base-content/70">
-					Albert Heijn isn't connected — lists can't be sent to the AH app yet.
-					<a href="{base}/settings" class="font-medium text-primary underline-offset-2 hover:underline">Connect it in Settings</a>.
+					{m.shopping_ah_not_connected_banner()}
+					<a href="{base}/settings" class="font-medium text-primary underline-offset-2 hover:underline">{m.shopping_connect_settings_link()}</a>.
 				</span>
 			</div>
 		</div>
@@ -164,7 +165,7 @@
 		<div class="mb-3 rounded-2xl border border-info/20 bg-info/10 px-3 py-2 text-sm text-base-content/70" role="status">
 			<div class="flex gap-2">
 				<Icon name="warn" class="mt-0.5 h-4 w-4 shrink-0 text-info" />
-				<span>Without recipe: {data.mealsWithoutRecipe.join(', ')}</span>
+				<span>{m.shopping_without_recipe({ names: data.mealsWithoutRecipe.join(', ') })}</span>
 			</div>
 		</div>
 	{/if}
@@ -173,9 +174,9 @@
 		<EmptyState icon="🛒" title={emptyCopy.title} description={emptyCopy.description}>
 			{#snippet action()}
 				{#if data.emptyState === 'no_meals'}
-					<a href="{base}/meal-plan" class="btn btn-primary btn-sm">Plan meals</a>
+					<a href="{base}/meal-plan" class="btn btn-primary btn-sm">{m.shopping_plan_meals_button()}</a>
 				{:else}
-					<a href="{base}/inventory" class="btn btn-outline btn-sm">View stock</a>
+					<a href="{base}/inventory" class="btn btn-outline btn-sm">{m.shopping_view_stock_button()}</a>
 				{/if}
 			{/snippet}
 		</EmptyState>

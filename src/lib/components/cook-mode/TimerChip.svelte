@@ -8,6 +8,7 @@
 	mistaps into "step done" toggles.
 -->
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { fmtClock } from './palette';
 
 	type Props = {
@@ -33,9 +34,9 @@
 					e.stopPropagation();
 					onReset();
 				}}
-				aria-label="Reset timer"
+				aria-label={m.cookmode_timerchip_reset_aria()}
 			>
-				<span>done</span>
+				<span>{m.cookmode_timerchip_done_label()}</span>
 				<span class="opacity-70">↺</span>
 			</button>
 		{:else if !active}
@@ -46,7 +47,7 @@
 					e.stopPropagation();
 					onStart();
 				}}
-				aria-label="Start {Math.ceil(seconds / 60)} minute timer">⏱ {Math.ceil(seconds / 60)}m</button
+				aria-label={m.cookmode_timerchip_start_aria({ minutes: Math.ceil(seconds / 60) })}>⏱ {Math.ceil(seconds / 60)}m</button
 			>
 		{:else}
 			<button
@@ -56,7 +57,7 @@
 					e.stopPropagation();
 					onReset();
 				}}
-				aria-label="Cancel timer"
+				aria-label={m.cookmode_cancel_timer_aria()}
 			>
 				<span>{remaining != null ? fmtClock(remaining) : '⏱'}</span>
 				<span class="text-[11px] opacity-70">✕</span>

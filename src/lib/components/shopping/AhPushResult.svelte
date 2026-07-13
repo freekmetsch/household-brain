@@ -4,6 +4,7 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
+	import { m } from '$lib/paraglide/messages';
 	import { fade } from 'svelte/transition';
 	import type { AhPushOutcome } from './types';
 
@@ -25,19 +26,27 @@
 			class="mt-0.5 h-5 w-5 shrink-0 {result.failed.length ? 'text-warning' : 'text-success'}"
 		/>
 		<span>
-			{result.pushed} {result.pushed === 1 ? 'item' : 'items'} added to
-			{result.accountName ? `${result.accountName}'s` : 'the'} AH
-			{result.destination === 'order' ? 'order' : 'shopping list'}.
+			{result.pushed === 1
+				? m.shopping_ah_result_added_singular({
+						count: result.pushed,
+						account: result.accountName ? m.shopping_ah_account_named({ name: result.accountName }) : m.shopping_ah_account_default(),
+						destination: result.destination === 'order' ? m.shopping_ah_destination_order() : m.shopping_ah_destination_list()
+					})
+				: m.shopping_ah_result_added_plural({
+						count: result.pushed,
+						account: result.accountName ? m.shopping_ah_account_named({ name: result.accountName }) : m.shopping_ah_account_default(),
+						destination: result.destination === 'order' ? m.shopping_ah_destination_order() : m.shopping_ah_destination_list()
+					})}
 		</span>
 	</div>
 </div>
 {#if result.markedBought > 0}
 	<p class="mt-3 text-sm text-base-content/60">
-		{result.markedBought} moved to In basket.
+		{m.shopping_ah_marked_bought({ count: result.markedBought })}
 	</p>
 {/if}
 {#if result.failed.length}
-	<p class="mt-3 text-sm font-medium">Not added ({result.failed.length})</p>
+	<p class="mt-3 text-sm font-medium">{m.shopping_ah_not_added_heading({ count: result.failed.length })}</p>
 	<ul class="mt-1 space-y-0.5 text-sm">
 		{#each result.failed as f}
 			<li class="flex gap-2 text-base-content/60">
@@ -51,6 +60,6 @@
 	{/if}
 {/if}
 <div class="mt-4 flex justify-end gap-2">
-	<a href="https://www.ah.nl" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Open AH</a>
-	<button type="button" class="btn" onclick={() => onClose()}>Close</button>
+	<a href="https://www.ah.nl" target="_blank" rel="noopener noreferrer" class="btn btn-outline">{m.shopping_ah_open_button()}</a>
+	<button type="button" class="btn" onclick={() => onClose()}>{m.ui_bottomsheet_close()}</button>
 </div>
