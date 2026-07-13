@@ -235,6 +235,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				// Resolved lazily on first use, not hoisted alongside chatModel — the
 				// fallback only fires on a provider hiccup, so most turns never pay for it.
 				let fallbackModel: string | null = null;
+				// Output budget for a single turn. Reasoning-on models (GLM-5) spend
+				// several hundred tokens reasoning before emitting tool-call JSON, so a
+				// multi-recipe request needs real headroom — 2048 truncated the tool
+				// calls mid-JSON (they were then dropped, silently losing the request).
+				// A cap, not a target: normal short turns still stop early, so no cost
+				// regression. Bumped once to 16384 by the truncation-recovery path below.
+				let maxTokens = 8192;
+				let retriedTruncation = false;
 				while (true) {
 					if (iterations++ >= MAX_ITERATIONS) break;
 
@@ -245,14 +253,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 						prevTailIdx = applyMessageCacheAnchors(messages, prevTailIdx);
 					}
 
+					// Text streamed to the client before this turn ran — used to decide
+					// whether a truncated turn is safe to silently discard and retry.
+					const textLenBefore = fullText.length;
 					let turn;
 					try {
 						turn = await streamAgentTurn({
 							model: activeModel,
 							system: systemPrompt,
-							// Blast-radius cap: plain-text (P1) + bulk tools (P4) keep output short,
-							// so 2048 caps a runaway generation; the loop continues after a max_tokens stop.
-							maxTokens: 2048,
+							maxTokens,
 							tools,
 							messages,
 							signal: request.signal,
@@ -278,6 +287,24 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					}
 
 					logSpend(turn.model, turn.usage, turn.costUsd);
+
+					if (turn.finishReason === 'length' && turn.droppedToolCalls > 0) {
+						// Truncation recovery. A max_tokens cutoff mid-tool-call dropped that
+						// call (unparseable JSON). Running only the survivors would half-process
+						// the request (add two of three recipes, silently lose the rest), so
+						// discard the ENTIRE truncated turn and retry once with a bigger budget.
+						// Safe to retry in place only while no text streamed this turn (tool-heavy
+						// turns stream none); otherwise surface a typed error to the client.
+						const streamedText = fullText.length > textLenBefore;
+						if (!retriedTruncation && !streamedText) {
+							retriedTruncation = true;
+							maxTokens = 16384;
+							iterations--; // the retry replaces this turn; don't spend an iteration
+							continue;
+						}
+						controller.enqueue(sse({ type: 'error', code: 'turn_too_large' }));
+						break;
+					}
 
 					// Run every tool call that fully streamed this turn, regardless of stop
 					// reason — a big batch can hit max_tokens mid-stream but the completed

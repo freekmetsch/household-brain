@@ -277,6 +277,14 @@ export type AgentTurnResult = {
 	model: string;
 	/** Provider-reported cost (USD) when available — pass straight to logSpend. */
 	costUsd?: number | null;
+	/** Raw stop reason ('stop' | 'length' | 'tool_calls' | 'content_filter' | …). */
+	finishReason: string;
+	/**
+	 * Tool calls that arrived truncated (unparseable JSON) and were dropped — the
+	 * signature of a max_tokens cutoff mid-call. The loop uses this to avoid
+	 * half-processing a request (running only the calls that happened to survive).
+	 */
+	droppedToolCalls: number;
 };
 
 export type AgentTurnOpts = {
@@ -323,6 +331,7 @@ async function streamOpenRouterTurn(opts: AgentTurnOpts): Promise<AgentTurnResul
 	// stream in fragments).
 	const tc: Record<number, { id: string; name: string; args: string }> = {};
 	let usage: OpenRouterUsage = {};
+	let finishReason = '';
 
 	const reader = res.body.getReader();
 	const decoder = new TextDecoder();
@@ -355,6 +364,9 @@ async function streamOpenRouterTurn(opts: AgentTurnOpts): Promise<AgentTurnResul
 				);
 			}
 			if (chunk.usage) usage = chunk.usage;
+			// Stop reason arrives on the final choice chunk; 'length' means the
+			// generation was cut off by max_tokens (may have truncated a tool call).
+			if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
 			const delta = chunk.choices?.[0]?.delta;
 			if (!delta) continue;
 			if (typeof delta.content === 'string' && delta.content) {
@@ -374,14 +386,17 @@ async function streamOpenRouterTurn(opts: AgentTurnOpts): Promise<AgentTurnResul
 	const content: Anthropic.ContentBlockParam[] = [];
 	if (text) content.push({ type: 'text', text });
 	const toolCalls: Array<{ id: string; name: string; input: unknown }> = [];
+	let droppedToolCalls = 0;
 	for (const key of Object.keys(tc)) {
 		const c = tc[+key];
 		// A tool call truncated by max_tokens has unparseable JSON — drop it rather
-		// than run a partial call (mirrors the Anthropic-path guard).
+		// than run a partial call (mirrors the Anthropic-path guard). Count the drop
+		// so the loop can tell a clean turn from a cut-off one and recover.
 		let input: unknown;
 		try {
 			input = JSON.parse(c.args || '{}');
 		} catch {
+			droppedToolCalls++;
 			continue;
 		}
 		const id = c.id || `call_${key}`;
@@ -394,7 +409,9 @@ async function streamOpenRouterTurn(opts: AgentTurnOpts): Promise<AgentTurnResul
 		toolCalls,
 		usage: usageFromOpenRouter(usage),
 		model: opts.model,
-		costUsd: usage.cost ?? null
+		costUsd: usage.cost ?? null,
+		finishReason,
+		droppedToolCalls
 	};
 }
 
@@ -423,12 +440,25 @@ async function streamAnthropicTurn(opts: AgentTurnOpts): Promise<AgentTurnResult
 				toolCalls.push({ id: b.id, name: b.name, input: b.input });
 			}
 		}
+		// Map to the shared finish vocabulary ('max_tokens' → 'length'). The SDK
+		// omits a tool_use truncated by max_tokens, so we can't count drops
+		// directly — infer one when the cutoff left nothing runnable to show, so
+		// the loop's truncation recovery engages on this (dormant) backend too.
+		const finishReason = final.stop_reason === 'max_tokens' ? 'length' : (final.stop_reason ?? 'stop');
+		const droppedToolCalls =
+			final.stop_reason === 'max_tokens' &&
+			toolCalls.length === 0 &&
+			!final.content.some((b) => b.type === 'text')
+				? 1
+				: 0;
 		return {
 			content: final.content as Anthropic.ContentBlockParam[],
 			toolCalls,
 			usage: final.usage,
 			model: final.model,
-			costUsd: null
+			costUsd: null,
+			finishReason,
+			droppedToolCalls
 		};
 	} finally {
 		opts.signal.removeEventListener('abort', onAbort);

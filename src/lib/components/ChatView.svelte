@@ -453,6 +453,8 @@
 						if (event.code === 'cap_exceeded') {
 							capExceeded = true;
 							last.error = m.chat_cap_error();
+						} else if (event.code === 'turn_too_large') {
+							last.error = m.chat_error_too_large();
 						} else {
 							last.error = event.message ?? m.chat_error_generic_short();
 						}
