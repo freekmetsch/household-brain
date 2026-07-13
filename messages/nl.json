@@ -706,6 +706,7 @@
 	"chat_error_generic_short": "Er ging iets mis.",
 	"chat_error_stopped": "Gestopt.",
 	"chat_error_connection_lost": "Verbinding verloren — controleer je internet en probeer opnieuw.",
+	"chat_error_empty_reply": "De assistent gaf geen antwoord — probeer het opnieuw.",
 	"chat_tool_working_fallback": "Bezig",
 	"chat_tool_interrupted": "{summary} — onderbroken"
 }

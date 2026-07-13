@@ -475,6 +475,19 @@
 			if (last) {
 				last.streaming = false;
 				last.status = undefined;
+				// A clean [DONE] with nothing to show — GLM can return an empty "stub"
+				// completion (no text, no tool call), which would otherwise render as a
+				// blank bubble ("No response?"). Land it as a retryable error instead;
+				// canRetry() picks it up from here. Tool-only turns are excluded — they
+				// still have a tool line to show.
+				if (
+					last.role === 'assistant' &&
+					!last.error &&
+					!last.content.trim() &&
+					!last.toolCalls?.length
+				) {
+					last.error = m.chat_error_empty_reply();
+				}
 				// A tool that never got its result event would spin forever — the stream
 				// is done, so land it honestly.
 				for (const t of last.toolCalls ?? []) {

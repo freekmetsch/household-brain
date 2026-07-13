@@ -706,6 +706,7 @@
 	"chat_error_generic_short": "Something went wrong.",
 	"chat_error_stopped": "Stopped.",
 	"chat_error_connection_lost": "Connection lost — check your internet and retry.",
+	"chat_error_empty_reply": "The assistant didn't reply — try again.",
 	"chat_tool_working_fallback": "Working",
 	"chat_tool_interrupted": "{summary} — interrupted"
 }
