@@ -27,6 +27,8 @@ Run all three before opening a PR.
 
 This repo is the canonical dev repo for the app — it's what Railway (or any other deploy target) builds from directly, at the repo root.
 
+**Windows contributors:** commit `start.sh` with LF line endings only — a CRLF-corrupted shebang breaks `exec ./start.sh` in the container (`./start.sh: not found`). The repo's own git blobs are already clean LF; this only bites if your local `core.autocrlf` rewrites it on checkout and you then deploy from that local working copy directly instead of through git.
+
 ## Architecture invariants
 
 **AH push always sources from Dutch fields.** Recipes store ingredients in Dutch (`recipes.ingredients[].name`) alongside an English display/cache translation. Albert Heijn's product search, basket API, and shopping-list derivation must only ever read the Dutch fields — English fields are display data and are not valid AH lookup keys. If you're touching anything under `src/lib/server/ah/` or shopping-list generation, keep this seam intact.
