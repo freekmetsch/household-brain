@@ -26,6 +26,7 @@ import { buildToolDisplay } from '$lib/server/ai/tool_display';
 import { getHouseholdPref, K_HOUSEHOLD_PROFILE } from '$lib/server/db/household_prefs';
 import type { TurnExecutionContext } from '$lib/server/ai/commit_risk';
 import { APP_TIME_ZONE } from '$lib/week';
+import { getLocale } from '$lib/paraglide/runtime';
 
 // Vision upload hard caps (Stage 4b / P5.4). Images arrive as multipart/form-data
 // (no base64 +33% on the wire); the client downscales to ≤1568px before sending,
@@ -51,7 +52,11 @@ function loadSystemPrompt(username: string): string {
 			'utf-8'
 		);
 	}
-	const date = new Date().toLocaleDateString('en-GB', {
+	// Reply language follows the request's UI locale (Settings -> Display),
+	// not the household's fixed identity — resolved per call, same as date/profile.
+	const locale = getLocale();
+	const language = locale === 'nl' ? 'Dutch' : 'English';
+	const date = new Date().toLocaleDateString(locale === 'nl' ? 'nl-NL' : 'en-GB', {
 		timeZone: APP_TIME_ZONE,
 		weekday: 'long',
 		day: 'numeric',
@@ -64,6 +69,7 @@ function loadSystemPrompt(username: string): string {
 	return systemPromptTemplate
 		.replace('{{user}}', username)
 		.replace('{{date}}', date)
+		.replace('{{language}}', language)
 		.replace(
 			'{{household_profile}}',
 			profile || '(No household profile set yet — members can add one in Settings.)'
