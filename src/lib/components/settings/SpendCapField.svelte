@@ -10,6 +10,7 @@
 	import { SOURCE_LABEL, type ConfigSource } from '$lib/components/settings/provenance';
 	import { untrack } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 
 	type Category = 'chat' | 'background';
 
@@ -93,14 +94,14 @@
 			disabled={saving}
 		/>
 		<span class="text-xs text-base-content/50">{m.settingsshell_per_day_suffix()}</span>
-		<button
-			type="button"
+		<PendingButton
 			class="btn btn-xs btn-primary"
-			disabled={saving || !capInput || capInput === String(effective.value)}
+			pending={saving}
+			disabled={!capInput || capInput === String(effective.value)}
 			onclick={save}
 		>
 			{m.settingsshell_save_button()}
-		</button>
+		</PendingButton>
 		{#if effective.source !== 'default'}
 			<button
 				type="button"

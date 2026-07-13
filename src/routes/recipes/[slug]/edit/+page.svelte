@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import { base } from '$app/paths';
 	import FixedBottomBar from '$lib/components/ui/FixedBottomBar.svelte';
@@ -259,7 +260,7 @@
 			<a href="{base}/recipes/{data.recipe.slug}" class="btn btn-sm btn-ghost flex-1">{m.recipes_cancel_button()}</a>
 			<button type="submit" class="btn btn-sm btn-primary flex-1" disabled={submitting || !dirty}>
 				{#if submitting}
-					<span class="loading loading-spinner loading-xs"></span>
+					<Spinner size="xs" />
 				{/if}
 				{dirty ? m.recipes_edit_save_button() : m.recipes_edit_saved_button()}
 			</button>

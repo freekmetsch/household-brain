@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import BottomSheet from '$lib/components/ui/BottomSheet.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -135,7 +136,7 @@
 		/>
 		<div class="flex-1 overflow-y-auto min-h-0">
 			{#if addSubLoading}
-				<div class="py-6 text-center"><span class="loading loading-spinner"></span></div>
+				<div class="py-6 text-center"><Spinner size="md" /></div>
 			{:else if addSubFiltered.length === 0}
 				<p class="py-6 text-center text-sm text-base-content/50">{m.recipes_meal_no_matching()}</p>
 			{:else}

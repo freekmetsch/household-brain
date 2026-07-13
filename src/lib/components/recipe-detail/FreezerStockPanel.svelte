@@ -7,6 +7,7 @@
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { untrack } from 'svelte';
 	import SegmentedTabs from '$lib/components/ui/SegmentedTabs.svelte';
@@ -247,7 +248,7 @@
 							onclick={addServeFreshToShopping}
 						>
 							{#if serveSubmitting}
-								<span class="loading loading-spinner loading-xs"></span>
+								<Spinner size="xs" />
 							{/if}
 							{m.recipes_freezer_add_to_shopping_button({ count: serveFresh.length })}
 						</button>

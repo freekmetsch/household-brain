@@ -5,6 +5,7 @@
 	import ModelPicker from '$lib/components/settings/ModelPicker.svelte';
 	import SpendCapField from '$lib/components/settings/SpendCapField.svelte';
 	import SettingsPanelHeader from '$lib/components/settings/SettingsPanelHeader.svelte';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 	import { optimistic } from '$lib/optimistic';
 	import { m } from '$lib/paraglide/messages';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -142,14 +143,14 @@
 			<p class="mt-1.5 text-xs text-base-content/50">
 				{m.settings_ai_household_profile_hint()}
 			</p>
-			<button
-				type="button"
+			<PendingButton
 				class="btn btn-sm btn-primary mt-2"
-				disabled={householdProfileSaving || householdProfile === data.householdProfile}
+				pending={householdProfileSaving}
+				disabled={householdProfile === data.householdProfile}
 				onclick={saveHouseholdProfile}
 			>
 				{m.settingsshell_save_button()}
-			</button>
+			</PendingButton>
 		</section>
 
 		<section class="ui-form-card">

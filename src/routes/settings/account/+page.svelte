@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import SettingsPanelHeader from '$lib/components/settings/SettingsPanelHeader.svelte';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { toast } from '$lib/stores/toast.svelte';
 	import type { PageData } from './$types';
@@ -90,9 +91,9 @@
 				{#if pwdError}
 					<p class="text-sm text-error" role="alert">{pwdError}</p>
 				{/if}
-				<button class="btn btn-sm btn-primary mt-1" type="submit" disabled={pwdLoading}>
+				<PendingButton class="btn btn-sm btn-primary mt-1" type="submit" pending={pwdLoading}>
 					{pwdLoading ? m.settings_account_saving_label() : m.settings_account_update_password_button()}
-				</button>
+				</PendingButton>
 			</form>
 		</section>
 

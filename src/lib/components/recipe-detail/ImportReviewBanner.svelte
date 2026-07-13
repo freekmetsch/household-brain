@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { m } from '$lib/paraglide/messages';
 
@@ -75,7 +76,7 @@
 					onclick={dismissReview}
 				>
 					{#if reviewDismissing}
-						<span class="loading loading-spinner loading-xs"></span>
+						<Spinner size="xs" />
 					{/if}
 					{m.recipes_import_looks_good_button()}
 				</button>

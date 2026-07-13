@@ -1,9 +1,13 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import { enhance } from '$app/forms';
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale, setLocale } from '$lib/paraglide/runtime';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 
 	let { form } = $props<{ form: { error?: string } | null }>();
+
+	let submitting = $state(false);
 </script>
 
 <div class="min-h-screen flex items-center justify-center bg-base-200 p-4">
@@ -32,7 +36,18 @@
 				</div>
 			{/if}
 
-			<form method="POST" action="{base}/login" class="space-y-4">
+			<form
+				method="POST"
+				action="{base}/login"
+				class="space-y-4"
+				use:enhance={() => {
+					submitting = true;
+					return async ({ update }) => {
+						await update();
+						submitting = false;
+					};
+				}}
+			>
 				<label class="form-control w-full">
 					<div class="label"><span class="label-text">{m.login_username_label()}</span></div>
 					<input
@@ -55,7 +70,9 @@
 					/>
 				</label>
 
-				<button type="submit" class="btn btn-primary w-full">{m.login_signin_button()}</button>
+				<PendingButton type="submit" pending={submitting} class="btn btn-primary w-full"
+					>{m.login_signin_button()}</PendingButton
+				>
 			</form>
 		</div>
 	</div>

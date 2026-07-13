@@ -11,6 +11,7 @@
 	import { SOURCE_LABEL, type ConfigSource } from '$lib/components/settings/provenance';
 	import { untrack } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 
 	type Role = 'chat' | 'chat_fallback' | 'vision' | 'background';
 
@@ -101,14 +102,14 @@
 			bind:value={modelInput}
 			disabled={saving}
 		/>
-		<button
-			type="button"
+		<PendingButton
 			class="btn btn-sm btn-primary shrink-0"
-			disabled={saving || !modelInput.trim() || modelInput.trim() === effective.value}
+			pending={saving}
+			disabled={!modelInput.trim() || modelInput.trim() === effective.value}
 			onclick={save}
 		>
-			{saving ? '...' : m.settingsshell_save_button()}
-		</button>
+			{m.settingsshell_save_button()}
+		</PendingButton>
 	</div>
 	{#if shortcuts.length}
 		<div class="flex flex-wrap gap-1.5">

@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { m } from '$lib/paraglide/messages';
 
 	let {
@@ -142,7 +143,7 @@
 					disabled={submitting}
 					onclick={freeze}
 				>
-					{#if submitting}<span class="loading loading-spinner loading-xs"></span>{/if}
+					{#if submitting}<Spinner size="xs" />{/if}
 					{m.recipes_freeze_button({ count: portions })}
 				</button>
 			</div>

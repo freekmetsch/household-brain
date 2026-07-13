@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { goto } from '$app/navigation';
 	import { CORE_FOOD_TYPE_OPTIONS, foodCategoryLabel } from '$lib/food_categories';
 	import BottomSheet from '$lib/components/ui/BottomSheet.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
+	import SmartImage from '$lib/components/ui/SmartImage.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { untrack } from 'svelte';
 	import { flip } from 'svelte/animate';
@@ -424,7 +426,7 @@
 				>
 					{#if recipe.imageUrl}
 						<figure class="h-28 overflow-hidden">
-							<img src={recipe.imageUrl} alt={title} class="w-full h-full object-cover" loading="lazy" />
+							<SmartImage src={recipe.imageUrl} alt={title} class="h-full w-full" />
 						</figure>
 					{:else}
 						<div class="h-28 bg-base-200 flex items-center justify-center text-3xl">🍽️</div>
@@ -525,7 +527,7 @@
 					disabled={newMealLoading || newMealSlugs.length < 2 || !newMealTitle.trim()}
 					onclick={createMeal}
 				>
-					{#if newMealLoading}<span class="loading loading-spinner loading-xs"></span>{/if}
+					{#if newMealLoading}<Spinner size="xs" />{/if}
 					{m.recipes_combine_button()} {newMealSlugs.length >= 2 ? newMealSlugs.length : ''}
 				</button>
 			</div>
@@ -553,7 +555,7 @@
 					disabled={!scrapeUrl.trim() || scrapeLoading}
 				>
 					{#if scrapeLoading}
-						<span class="loading loading-spinner loading-sm"></span>
+						<Spinner size="sm" />
 						{m.recipes_fetching_label()}
 					{:else}
 						<Icon name="plus" class="h-4 w-4" />

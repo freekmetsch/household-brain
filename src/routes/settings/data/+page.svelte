@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import SettingsPanelHeader from '$lib/components/settings/SettingsPanelHeader.svelte';
 	import BottomSheet from '$lib/components/ui/BottomSheet.svelte';
@@ -132,7 +133,7 @@
 				disabled={exportLoading}
 			>
 				{#if exportLoading}
-					<span class="loading loading-spinner loading-xs"></span>
+					<Spinner size="xs" />
 				{/if}
 				{m.settings_data_export_button()}
 			</button>
@@ -173,7 +174,7 @@
 				onclick={runImport}
 			>
 				{#if importLoading}
-					<span class="loading loading-spinner loading-xs"></span>
+					<Spinner size="xs" />
 				{/if}
 				{m.settings_data_import_button()}
 			</button>
@@ -240,7 +241,7 @@
 				disabled={resetConfirmText !== resetTarget.label || resetLoading}
 				onclick={confirmReset}
 			>
-				{#if resetLoading}<span class="loading loading-spinner loading-xs"></span>{/if}
+				{#if resetLoading}<Spinner size="xs" />{/if}
 				{m.settings_data_delete_button()}
 			</button>
 		</div>

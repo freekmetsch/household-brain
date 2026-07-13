@@ -10,6 +10,7 @@
 	import { slide } from 'svelte/transition';
 	import { m } from '$lib/paraglide/messages';
 	import { FOOD_CLASS_ROOTS } from '$lib/food_class';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 	import { composeQty, FOOD_CLASS_LABEL } from './shared';
 	import type { Item, Kind, Section } from './shared';
 
@@ -124,9 +125,9 @@
 		</div>
 		<div class="mt-3 flex items-center justify-end gap-1.5">
 			<button type="button" class="btn btn-ghost btn-sm h-8 min-h-0" onclick={() => onCancel()}>{m.inventory_addform_cancel_button()}</button>
-			<button type="submit" class="btn btn-primary btn-sm h-8 min-h-0 px-4" disabled={addSubmitting || !addName.trim()}>
+			<PendingButton type="submit" class="btn btn-primary btn-sm h-8 min-h-0 px-4" pending={addSubmitting} disabled={!addName.trim()}>
 				{addSubmitting ? m.inventory_addform_saving() : m.inventory_addform_submit_button()}
-			</button>
+			</PendingButton>
 		</div>
 	</form>
 {/if}

@@ -8,6 +8,7 @@
 	import { m } from '$lib/paraglide/messages';
 	import type { PreviewItem } from '$lib/shopping_ah';
 	import { slide } from 'svelte/transition';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 	import { formatPrice, itemLabel } from './format';
 	import type { Decision } from './types';
 
@@ -64,13 +65,14 @@
 			autocomplete="off"
 			bind:value={searchTerm}
 		/>
-		<button
+		<PendingButton
 			type="submit"
 			class="btn btn-sm shrink-0"
-			disabled={searching || !(searchTerm ?? '').trim()}
+			pending={!!searching}
+			disabled={!(searchTerm ?? '').trim()}
 		>
 			{searching ? m.shopping_ah_searching_label() : m.shopping_ah_search_button()}
-		</button>
+		</PendingButton>
 	</form>
 {/snippet}
 

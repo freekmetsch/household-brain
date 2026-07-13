@@ -9,6 +9,7 @@
 	import { goto } from '$app/navigation';
 	import { slide } from 'svelte/transition';
 	import { m } from '$lib/paraglide/messages';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 
 	let {
 		open = $bindable(false),
@@ -20,8 +21,11 @@
 		recipeTitle: string;
 	} = $props();
 
+	let sending = $state(false);
+
 	function sendEditWithAi() {
-		if (!value.trim()) return;
+		if (!value.trim() || sending) return;
+		sending = true;
 		const msg = `[Recipe: ${recipeTitle}]\n${value.trim()}`;
 		goto(`${base}/?msg=${encodeURIComponent(msg)}`);
 	}
@@ -34,12 +38,16 @@
 			class="input input-bordered input-sm flex-1"
 			placeholder={m.recipes_aiedit_placeholder()}
 			bind:value
+			disabled={sending}
 			onkeydown={(e) => {
 				if (e.key === 'Enter') sendEditWithAi();
 			}}
 		/>
-		<button class="btn btn-sm btn-primary" onclick={sendEditWithAi} disabled={!value.trim()}
-			>→</button
+		<PendingButton
+			class="btn btn-sm btn-primary"
+			pending={sending}
+			disabled={!value.trim()}
+			onclick={sendEditWithAi}>→</PendingButton
 		>
 		<button
 			type="button"

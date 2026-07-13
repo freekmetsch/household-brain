@@ -10,6 +10,7 @@
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import BottomSheet from '$lib/components/ui/BottomSheet.svelte';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
 	import { optimistic } from '$lib/optimistic';
@@ -390,7 +391,7 @@
 				disabled={ahPushing || (pushSummary.products === 0 && pushSummary.text === 0)}
 			>
 				{#if ahPushing}
-					<span class="loading loading-spinner loading-xs"></span>
+					<Spinner size="xs" />
 					{m.shopping_ah_sending_label()}
 				{:else}
 					{m.shopping_send_to_ah_button()}

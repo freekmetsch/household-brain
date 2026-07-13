@@ -14,6 +14,7 @@
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { onDestroy, untrack } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
 	import type { BenchSheetRating, CookModeRecipe, CookModeStep } from '$lib/types';
@@ -717,7 +718,7 @@
 			class="mx-3 mt-3 rounded-xl border border-base-200 bg-base-100 px-3 py-2.5 flex items-center gap-2.5"
 			role="status"
 		>
-			<span class="loading loading-spinner loading-sm text-primary shrink-0"></span>
+			<Spinner size="sm" class="text-primary shrink-0" />
 			<div class="min-w-0 flex-1">
 				<p class="text-[13px] font-medium">
 					{regenerating ? m.benchsheet_refreshing_label() : m.benchsheet_writing_label()}
@@ -740,7 +741,7 @@
 	/>
 {:else if loading}
 	<div class="flex flex-col items-center justify-center gap-3 text-center p-5 min-h-[40vh]">
-		<span class="loading loading-spinner loading-lg"></span>
+		<Spinner size="lg" />
 		<p class="text-sm text-base-content/70">
 			{regenerating ? m.benchsheet_refreshing_label() : m.benchsheet_writing_label()}
 			<span class="tabular-nums">{formatElapsed(genElapsedSec)}</span>

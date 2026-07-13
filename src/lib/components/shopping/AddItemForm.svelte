@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -92,7 +93,7 @@
 			aria-label={m.shopping_additem_submit_aria()}
 		>
 			{#if addSubmitting}
-				<span class="loading loading-spinner loading-xs"></span>
+				<Spinner size="xs" />
 			{:else}
 				<Icon name="plus" />
 			{/if}

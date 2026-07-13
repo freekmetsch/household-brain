@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { tick } from 'svelte';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
 	import { m } from '$lib/paraglide/messages';
@@ -158,7 +159,7 @@
 			{#if recipe.imageUrl}
 				<img src={recipe.imageUrl} alt="" class="w-full h-full object-cover" loading="lazy" />
 			{:else if imageUploading}
-				<span class="loading loading-spinner loading-xs"></span>
+				<Spinner size="xs" />
 			{:else}
 				<span aria-hidden="true">📷</span>
 			{/if}
@@ -276,7 +277,7 @@
 	</div>
 	{#if viewLang === 'en' && translationLoading}
 		<div class="px-3 pb-2 flex items-center gap-2 text-[11px] text-base-content/60">
-			<span class="loading loading-spinner loading-xs"></span>
+			<Spinner size="xs" />
 			<span>{m.recipes_header_translating()}</span>
 		</div>
 	{:else if viewLang === 'en' && translationMessage}

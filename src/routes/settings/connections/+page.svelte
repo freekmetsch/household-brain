@@ -2,6 +2,7 @@
 	import { base } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
 	import SettingsPanelHeader from '$lib/components/settings/SettingsPanelHeader.svelte';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { toast } from '$lib/stores/toast.svelte';
 	import type { PageData } from './$types';
@@ -120,14 +121,14 @@
 								placeholder={'{"access_token": "...", "refresh_token": "..."}'}
 								bind:value={ahPayload}
 							></textarea>
-							<button
-								type="button"
+							<PendingButton
 								class="btn btn-sm btn-primary self-start"
 								onclick={connectAh}
-								disabled={ahSaving || !ahPayload.trim()}
+								pending={ahSaving}
+								disabled={!ahPayload.trim()}
 							>
 								{ahSaving ? m.settings_connections_checking_label() : m.settings_connections_connect_ah_button()}
-							</button>
+							</PendingButton>
 							{#if ahError}
 								<p class="text-sm text-error" role="alert">{ahError}</p>
 							{/if}

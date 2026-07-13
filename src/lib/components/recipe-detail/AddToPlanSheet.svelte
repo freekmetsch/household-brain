@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { untrack } from 'svelte';
 	import BottomSheet from '$lib/components/ui/BottomSheet.svelte';
@@ -84,7 +85,7 @@
 			disabled={addToPlanSubmitting}
 		>
 			{#if addToPlanSubmitting}
-				<span class="loading loading-spinner loading-xs"></span>
+				<Spinner size="xs" />
 			{/if}
 			{m.recipes_addplan_add_button()}
 		</button>

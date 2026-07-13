@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import ModelPicker from '$lib/components/settings/ModelPicker.svelte';
 	import SettingsPanelHeader from '$lib/components/settings/SettingsPanelHeader.svelte';
+	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 	import { SOURCE_LABEL } from '$lib/components/settings/provenance';
 	import { m } from '$lib/paraglide/messages';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -114,14 +115,14 @@
 					bind:value={temperatureInput}
 					disabled={temperatureSaving}
 				/>
-				<button
-					type="button"
+				<PendingButton
 					class="btn btn-xs btn-primary"
-					disabled={temperatureSaving || !temperatureInput.trim()}
+					pending={temperatureSaving}
+					disabled={!temperatureInput.trim()}
 					onclick={saveTemperature}
 				>
 					{m.settingsshell_save_button()}
-				</button>
+				</PendingButton>
 				{#if temperatureEffective.source !== 'default'}
 					<button
 						type="button"
