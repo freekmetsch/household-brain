@@ -12,7 +12,7 @@ COPY project.inlang ./project.inlang
 COPY messages ./messages
 RUN npm ci
 COPY . .
-RUN DATABASE_URL=./build.db npx vite build
+RUN DATABASE_URL=./build.db npm run build
 RUN npm prune --omit=dev
 
 FROM node:22-slim
