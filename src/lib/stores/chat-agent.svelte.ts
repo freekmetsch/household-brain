@@ -1,6 +1,7 @@
 import { base } from '$app/paths';
 import { invalidateAll } from '$app/navigation';
 import { m } from '$lib/paraglide/messages';
+import type { ChatActionV1 } from '$lib/chat/actions';
 import type { ScreenContextV1 } from '$lib/chat/screen_context';
 import type { ToolDisplay } from '$lib/tool_display';
 import { looksLikeJsonArtifact } from '$lib/chat_sanitize';
@@ -24,11 +25,13 @@ export type ChatMessage = {
 	streaming?: boolean;
 	hydrated?: boolean;
 	images?: string[];
+	action?: ChatActionV1;
 	status?: string;
 	at?: Date;
 	error?: string;
 };
 export type ChatAttachment = { id: number; blob: Blob; url: string; name: string };
+export type ChatSendOptions = { retry?: boolean; action?: ChatActionV1 };
 
 type HydratedMessage = {
 	role: 'user' | 'assistant';
@@ -294,19 +297,23 @@ export class ChatAgentController {
 		if (!previous) return;
 		this.messages.pop();
 		this.messages.pop();
-		await this.send(previous.content, true);
+		await this.send(previous.content, { retry: true, action: previous.action });
 	}
 
 	abort(): void {
 		this.abortController?.abort();
 	}
 
-	async send(text = this.input, isRetry = false): Promise<void> {
+	async send(text = this.input, options: boolean | ChatSendOptions = false): Promise<void> {
+		const isRetry = typeof options === 'boolean' ? options : options.retry === true;
+		const action = typeof options === 'boolean' ? undefined : options.action;
 		// A contextual CTA can open the agent and send in the same tick. Let the
 		// one-time history load settle first; otherwise hydrateOnce can replace the
 		// just-appended optimistic turn with the older server snapshot.
 		if (!this.hydrated) await this.ensureHydrated();
-		const outgoing = this.attachments;
+		// A bound UI action is text/data-only. Do not accidentally consume a photo
+		// or draft the user had staged in the regular composer.
+		const outgoing = action ? [] : this.attachments;
 		const hasAttachments = outgoing.length > 0;
 		if (this.isStreaming || (!text.trim() && !hasAttachments)) return;
 		// Screen publishers run inside Svelte's reactive graph, so screenContext is
@@ -318,12 +325,13 @@ export class ChatAgentController {
 			? (JSON.parse(JSON.stringify(this.screenContext)) as ScreenContextV1)
 			: undefined;
 
-		this.attachments = [];
+		if (!action) this.attachments = [];
 		this.attachError = '';
 		this.messages.push({
 			role: 'user',
 			content: text,
 			at: new Date(),
+			action,
 			images: hasAttachments ? outgoing.map((attachment) => attachment.url) : undefined
 		});
 		this.messages.push({
@@ -334,7 +342,7 @@ export class ChatAgentController {
 			streaming: true,
 			status: hasAttachments ? m.chat_status_reading_photo() : m.chat_status_thinking()
 		});
-		this.input = '';
+		if (text === this.input) this.input = '';
 		this.isStreaming = true;
 		this.abortController = new AbortController();
 		let wrote = false;
@@ -352,7 +360,7 @@ export class ChatAgentController {
 				body = form;
 			} else {
 				headers['Content-Type'] = 'application/json';
-				body = JSON.stringify({ message: text, retry: isRetry, screenContext });
+				body = JSON.stringify({ message: text, retry: isRetry, screenContext, action });
 			}
 			const response = await fetch(`${base}/api/chat`, {
 				method: 'POST',

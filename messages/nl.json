@@ -138,7 +138,7 @@
 	"recipes_translation_connection_failed": "Verbinding mislukt — Nederlands wordt getoond. Tik om opnieuw te proberen.",
 	"recipes_confirm_leave_timer": "Je hebt een actieve timer — toch de pagina verlaten?",
 	"recipes_confirm_reset_cook_progress": "Dit recept opnieuw starten en de timers wissen?",
-	"recipes_ai_roles_prefill": "Markeer elk ingrediënt als meekoken of vers serveren",
+	"recipes_ai_roles_prefill": "Deel de ingrediënten van {title} in als meekoken of vers serveren",
 	"recipes_title_suffix": "Recepten",
 
 	"recipes_header_back_aria": "Terug naar recepten",

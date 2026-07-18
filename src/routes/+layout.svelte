@@ -16,8 +16,20 @@
 		data: { user: { id: number; username: string } | null; theme: string; recipeLang: 'en' | 'nl' };
 		children: import('svelte').Snippet;
 	}>();
-	const chatAgent = untrack(() => (data.user ? new ChatAgentController(data.user.username) : null));
-	if (chatAgent) provideChatAgent(chatAgent);
+	let chatAgent = $state<ChatAgentController | null>(
+		untrack(() => (data.user ? new ChatAgentController(data.user.username) : null))
+	);
+	provideChatAgent({
+		get controller() {
+			return chatAgent;
+		}
+	});
+	$effect.pre(() => {
+		const username = data.user?.username ?? null;
+		if (username === (chatAgent?.username ?? null)) return;
+		chatAgent?.destroy();
+		chatAgent = username ? new ChatAgentController(username) : null;
+	});
 	onDestroy(() => chatAgent?.destroy());
 
 	function fallbackScreen(routeId: string) {

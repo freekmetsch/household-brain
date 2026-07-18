@@ -226,17 +226,37 @@
 
 <style>
 	.agent-dialog {
-		inset-block: var(--ui-safe-top) var(--ui-nav-offset);
-		inset-inline: auto 0;
-		width: min(34rem, calc(100vw - 5rem));
-		height: auto;
+		inset-block: auto var(--ui-overlay-bottom);
+		inset-inline: auto 1rem;
+		width: min(30rem, calc(100vw - 2rem));
+		height: min(42rem, 72dvh);
+		max-height: calc(100dvh - var(--ui-overlay-bottom) - var(--ui-safe-top) - 1rem);
+		border-radius: var(--radius-box);
+		transform-origin: bottom right;
+	}
+	@media (min-width: 48rem) {
+		.agent-dialog[open] {
+			animation: agent-dialog-enter var(--motion-content) var(--ease-emphasized);
+		}
+	}
+	@keyframes agent-dialog-enter {
+		from {
+			opacity: 0;
+			transform: translateY(0.5rem) scale(0.985);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
 	}
 	@media (max-width: 47.999rem) {
 		.agent-dialog {
 			inset: 0;
 			width: 100vw;
 			height: 100dvh;
+			max-height: none;
 			border: 0;
+			border-radius: 0;
 			padding-top: var(--ui-safe-top);
 			padding-bottom: var(--ui-safe-bottom);
 		}

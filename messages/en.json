@@ -138,7 +138,7 @@
 	"recipes_translation_connection_failed": "Connection failed — viewing Dutch. Tap to retry.",
 	"recipes_confirm_leave_timer": "You have an active timer — leave anyway?",
 	"recipes_confirm_reset_cook_progress": "Start this recipe over and clear its timers?",
-	"recipes_ai_roles_prefill": "Mark each ingredient as cook-in or serve-fresh",
+	"recipes_ai_roles_prefill": "Classify the ingredients for {title} as cook-in or serve-fresh",
 	"recipes_title_suffix": "Recipes",
 
 	"recipes_header_back_aria": "Back to recipes",

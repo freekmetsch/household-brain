@@ -235,7 +235,9 @@
 	// the cook to send manually.
 	function openRolesAiEdit() {
 		chatAgent.open();
-		void chatAgent.send(m.recipes_ai_roles_prefill());
+		void chatAgent.send(m.recipes_ai_roles_prefill({ title: displayTitle }), {
+			action: { v: 1, type: 'classify_recipe_ingredients', recipeSlug: recipe.slug }
+		});
 	}
 
 	function openRecipeAiEdit() {
