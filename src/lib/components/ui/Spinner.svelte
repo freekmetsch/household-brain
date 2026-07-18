@@ -1,10 +1,14 @@
 <script lang="ts">
-	// Shared loading indicator, food edition: a steaming pot drawn in the app's
-	// stroke-icon style (pot geometry mirrors `pot` in icons/paths.ts). Keeps the
-	// old daisyUI-spinner API (size / class / label) so every call site — incl.
+	// Shared loading indicator, food edition: a steaming pot drawn from the
+	// ACTIVE icon set (every set's `pot` ends with its two steam paths — that
+	// positional contract is what gets animated here). Keeps the old
+	// daisyUI-spinner API (size / class / label) so every call site — incl.
 	// PendingButton — stays untouched. `variant="simmer"` is the inline
 	// three-bubbles form that replaced the ad-hoc daisyUI loading-dots.
 	// Reduced motion: steam/bubbles freeze at partial opacity (no keyframes).
+	import { toPathDef } from '$lib/components/ui/icons/paths';
+	import { iconSet } from '$lib/components/ui/icons/active.svelte';
+
 	let {
 		size = 'sm',
 		variant = 'pot',
@@ -21,6 +25,11 @@
 	} = $props();
 
 	const SIZES = { xs: 'h-4 w-4', sm: 'h-5 w-5', md: 'h-6 w-6', lg: 'h-10 w-10' } as const;
+
+	const pot = $derived(iconSet.icons.pot);
+	const bodyPaths = $derived(pot.paths.slice(0, -2).map(toPathDef));
+	const steamPaths = $derived(pot.paths.slice(-2).map(toPathDef));
+	const cap = $derived(pot.cap ?? 'round');
 	// simmer is a wide-format inline row; height tracks `size`, width is 2× so
 	// the bubbles keep their spacing.
 	const SIMMER_SIZES = { xs: 'h-2 w-6', sm: 'h-2.5 w-7', md: 'h-3 w-9', lg: 'h-5 w-14' } as const;
@@ -37,19 +46,25 @@
 {:else}
 	<span class="inline-flex items-center justify-center {klass}" role="status" aria-label={label}>
 		<svg
-			viewBox="0 0 24 24"
+			viewBox={pot.viewBox}
 			class={SIZES[size]}
 			fill="none"
-			stroke="currentColor"
-			stroke-width="2"
-			stroke-linecap="round"
-			stroke-linejoin="round"
+			stroke-width={pot.sw}
+			stroke-linecap={cap}
+			stroke-linejoin={cap === 'round' ? 'round' : 'miter'}
 			aria-hidden="true"
 		>
-			<path d="M3.5 10h17" />
-			<path d="M5 10h14v6.3a3.2 3.2 0 0 1-3.2 3.2H8.2A3.2 3.2 0 0 1 5 16.3V10Z" />
-			<path class="steam" d="M9 3.2c-.7.8-.7 1.9 0 2.7s.7 1.9 0 2.7" />
-			<path class="steam steam-2" d="M15 3.2c-.7.8-.7 1.9 0 2.7s.7 1.9 0 2.7" />
+			{#each bodyPaths as pd}
+				<path
+					d={pd.d}
+					fill={pd.fill ? 'currentColor' : 'none'}
+					stroke={pd.fill ? 'none' : 'currentColor'}
+					stroke-width={pd.sw}
+					opacity={pd.opacity}
+				/>
+			{/each}
+			<path class="steam" d={steamPaths[0].d} stroke="currentColor" />
+			<path class="steam steam-2" d={steamPaths[1].d} stroke="currentColor" />
 		</svg>
 	</span>
 {/if}
