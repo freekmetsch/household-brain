@@ -47,6 +47,7 @@
 	let ahNotConnected = $state(false);
 	let ahPushing = $state(false);
 	let ahResult = $state<AhPushOutcome | null>(null);
+	let previewRun = 0;
 
 	// Favorite AH product per item term (household-level, server-persisted).
 	// Seeded from each preview's isFavorite flags; toggles update optimistically.
@@ -55,6 +56,7 @@
 	// Shared reset for everything scoped to one preview run — the week-switch
 	// effect and openAhModal must clear the same set, or a stale field leaks.
 	function resetAhPreview() {
+		previewRun += 1;
 		ahItems = null;
 		decisions = {};
 		expanded = {};
@@ -99,8 +101,10 @@
 	export async function openAhModal() {
 		const weekAtOpen = weekStart;
 		resetAhPreview();
+		const run = ++previewRun;
 		ahLoading = true;
 		ahOpen = true;
+		const stale = () => weekStart !== weekAtOpen || previewRun !== run;
 
 		// AH-INVARIANT: item names originate from Dutch shopping-list data.
 		// Exclude items already covered by stock -- sending them would over-buy.
@@ -113,43 +117,53 @@
 			return;
 		}
 
-		const r = await fetch(`${base}/api/shopping/ah-preview`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ items: toSend })
-		});
-		ahLoading = false;
-		// The user may have switched weeks (closing the sheet first) while this
-		// request was in flight -- a stale preview must not write into the new
-		// week's state.
-		if (weekStart !== weekAtOpen) return;
-		if (!r.ok) {
+		try {
+			const r = await fetch(`${base}/api/shopping/ah-preview`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ items: toSend })
+			});
+			// The user may have switched weeks or started another preview while
+			// this request was in flight. A stale response must not write into it.
+			if (stale()) return;
+			if (!r.ok) {
+				ahError = m.shopping_ah_error_connection_failed();
+				toast.error(m.shopping_toast_ah_matches_failed());
+				return;
+			}
+			const d = await r.json();
+			if (stale()) return;
+			if (!d.ok) {
+				if (d.reason === 'not_connected') ahNotConnected = true;
+				else ahError = d.reason ?? m.shopping_ah_error_connection_failed();
+				return;
+			}
+
+			const previewItems = Array.isArray(d.items) ? (d.items as PreviewItem[]) : null;
+			if (!previewItems) throw new Error('Invalid AH preview response');
+			const nextDecisions: Record<string, Decision> = {};
+			const nextBonus: Record<string, boolean> = {};
+			const nextFavorites: Record<string, string> = {};
+			const nextSearchTerms: Record<string, string> = {};
+			for (const it of previewItems) {
+				nextDecisions[it.ref] = { mode: it.status === 'product' ? 'product' : 'freetext', pick: 0 };
+				nextSearchTerms[it.ref] = '';
+				if (it.status === 'product') nextBonus[it.term] = it.candidates[0]?.isBonus ?? false;
+				const fav = it.candidates.find((c) => c.isFavorite);
+				if (fav) nextFavorites[it.term] = fav.id;
+			}
+			decisions = nextDecisions;
+			favorites = nextFavorites;
+			searchTerms = nextSearchTerms;
+			bonusByName = { ...bonusByName, ...nextBonus };
+			ahItems = previewItems;
+		} catch {
+			if (stale()) return;
 			ahError = m.shopping_ah_error_connection_failed();
 			toast.error(m.shopping_toast_ah_matches_failed());
-			return;
+		} finally {
+			if (!stale()) ahLoading = false;
 		}
-		const d = await r.json();
-		if (weekStart !== weekAtOpen) return;
-		if (!d.ok) {
-			if (d.reason === 'not_connected') ahNotConnected = true;
-			else ahError = d.reason ?? 'Unknown error';
-			return;
-		}
-
-		const previewItems = d.items as PreviewItem[];
-		const nextDecisions: Record<string, Decision> = {};
-		const nextBonus: Record<string, boolean> = {};
-		const nextFavorites: Record<string, string> = {};
-		for (const it of previewItems) {
-			nextDecisions[it.ref] = { mode: it.status === 'product' ? 'product' : 'freetext', pick: 0 };
-			if (it.status === 'product') nextBonus[it.term] = it.candidates[0]?.isBonus ?? false;
-			const fav = it.candidates.find((c) => c.isFavorite);
-			if (fav) nextFavorites[it.term] = fav.id;
-		}
-		ahItems = previewItems;
-		decisions = nextDecisions;
-		favorites = nextFavorites;
-		bonusByName = { ...bonusByName, ...nextBonus };
 	}
 
 	function pickProduct(ref: string, idx: number) {
@@ -318,6 +332,10 @@
 <BottomSheet bind:open={ahOpen} title={m.shopping_review_ah_order()}>
 	{#if ahLoading}
 		<div class="space-y-2 py-1" aria-label={m.shopping_ah_matching_products_aria()} role="status">
+			<div class="flex items-center gap-2 px-1 pb-1 text-sm text-base-content/60">
+				<Spinner size="xs" />
+				<span>{m.shopping_ah_matching_products_aria()}</span>
+			</div>
 			{#each Array(3) as _}
 				<div class="animate-pulse motion-reduce:animate-none rounded-2xl border border-base-300/60 p-3">
 					<div class="h-4 w-1/3 rounded bg-base-200"></div>

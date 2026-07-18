@@ -7,7 +7,7 @@ import { namesMatch, normalizeNameKey } from '$lib/match';
 import { deriveWeekNeeds } from '$lib/server/shopping_needs';
 import { getAHStatus } from '$lib/server/ah/client';
 import { getMealPlanPrefs } from '$lib/server/meal_plan/prefs';
-import { addDays, dateOfWeekday, isIsoDate, todayIso, weekKeyRange, weekStartFor } from '$lib/week';
+import { addDays, deliveryDateForPlanningWeek, isIsoDate, todayIso, weekKeyRange, weekStartFor } from '$lib/week';
 
 export type ShoppingItem = {
 	name: string;
@@ -137,7 +137,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		nextWeek: addDays(weekStart, 7),
 		isCurrentWeek: weekStart === weekStartFor(todayIso(), prefs.weekStartDay),
 		deliveryDate:
-			prefs.groceryDay == null ? null : dateOfWeekday(weekStart, prefs.groceryDay, prefs.weekStartDay),
+			prefs.groceryDay == null
+				? null
+				: deliveryDateForPlanningWeek(weekStart, prefs.groceryDay, prefs.weekStartDay),
 		emptyState: meals.length === 0 ? 'no_meals' : 'nothing_needed',
 		// Connection status drives the "not connected" banner — the AH push in the
 		// sheet fails closed anyway, but surfacing it up front spares the user the

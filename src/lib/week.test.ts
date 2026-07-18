@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	dateOfWeekday,
+	deliveryDateForPlanningWeek,
 	isIsoDate,
 	isoWeekNumber,
 	isoWeekStart,
@@ -57,6 +58,15 @@ describe('week helpers', () => {
 		expect(dateOfWeekday('2026-07-15', 0, 2)).toBe('2026-07-20');
 		// Classic Monday week: Sunday (6) is the last day.
 		expect(dateOfWeekday('2026-07-13', 6, 0)).toBe('2026-07-19');
+	});
+
+	it('associates a delivery with the planning week it supplies', () => {
+		// A Tuesday delivery supplies the Wednesday-start week that follows it,
+		// not the next Tuesday at the end of that planning week.
+		expect(deliveryDateForPlanningWeek('2026-07-22', 1, 2)).toBe('2026-07-21');
+		// Same-day and later-in-the-week deliveries keep their natural date.
+		expect(deliveryDateForPlanningWeek('2026-07-22', 2, 2)).toBe('2026-07-22');
+		expect(deliveryDateForPlanningWeek('2026-07-20', 4, 0)).toBe('2026-07-24');
 	});
 
 	it('buckets legacy week keys into the most-overlapping planning week', () => {

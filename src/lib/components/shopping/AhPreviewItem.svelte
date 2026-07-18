@@ -34,7 +34,11 @@
 		favoriteId,
 		expanded,
 		searching,
-		searchTerm = $bindable(''),
+		// No fallback here: Svelte rejects a two-way binding when the parent
+		// supplies `undefined` to a bindable prop with a fallback value. The sheet
+		// normally seeds every ref with an empty string, and this remains defensive
+		// for malformed/legacy previews.
+		searchTerm = $bindable(),
 		onToggleExclude,
 		onPickProduct,
 		onToggleFavorite,

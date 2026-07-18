@@ -12,7 +12,7 @@
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { optimistic } from '$lib/optimistic';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { addDays, dateOfWeekday, todayIso, APP_TIME_ZONE } from '$lib/week';
+	import { addDays, deliveryDateForPlanningWeek, todayIso, APP_TIME_ZONE } from '$lib/week';
 	import { weekdayName } from '$lib/weekday';
 	import { m } from '$lib/paraglide/messages';
 	import type { PageData } from './$types';
@@ -270,7 +270,9 @@
 				weekStartDate: meal.weekStartDate,
 				weekNumber: meal.weekNumber,
 				deliveryDate:
-					prefs.groceryDay == null ? null : dateOfWeekday(meal.weekStartDate, prefs.groceryDay, prefs.weekStartDay),
+					prefs.groceryDay == null
+						? null
+						: deliveryDateForPlanningWeek(meal.weekStartDate, prefs.groceryDay, prefs.weekStartDay),
 				meals: [meal]
 			}
 		].sort((a, b) => a.weekStartDate.localeCompare(b.weekStartDate));

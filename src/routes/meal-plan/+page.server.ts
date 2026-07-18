@@ -4,7 +4,15 @@ import { db } from '$lib/server/db/index';
 import { mealPlanMeals, recipes } from '$lib/server/db/schema';
 import { frozenPortionsByRecipe } from '$lib/server/recipe_links';
 import { getMealPlanPrefs } from '$lib/server/meal_plan/prefs';
-import { addDays, dateOfWeekday, isIsoDate, isoWeekNumber, nearestWeekBucket, todayIso, weekStartFor } from '$lib/week';
+import {
+	addDays,
+	deliveryDateForPlanningWeek,
+	isIsoDate,
+	isoWeekNumber,
+	nearestWeekBucket,
+	todayIso,
+	weekStartFor
+} from '$lib/week';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const prefs = getMealPlanPrefs();
@@ -53,7 +61,9 @@ export const load: PageServerLoad = async ({ url }) => {
 			weekStartDate,
 			weekNumber: isoWeekNumber(weekStartDate),
 			deliveryDate:
-				prefs.groceryDay == null ? null : dateOfWeekday(weekStartDate, prefs.groceryDay, prefs.weekStartDay),
+				prefs.groceryDay == null
+					? null
+					: deliveryDateForPlanningWeek(weekStartDate, prefs.groceryDay, prefs.weekStartDay),
 			meals
 		}));
 

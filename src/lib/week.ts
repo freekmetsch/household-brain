@@ -91,6 +91,22 @@ export function dateOfWeekday(weekStart: string, dayFromMonday: number, weekStar
 }
 
 /**
+ * Date on which the groceries for a planning week arrive.
+ *
+ * Unlike `dateOfWeekday`, this preserves the weekday's position relative to
+ * the planning-week boundary. A Tuesday delivery for a Wednesday-start week
+ * belongs to the week that starts the next day, so it resolves to Tuesday -1
+ * rather than the following Tuesday +6.
+ */
+export function deliveryDateForPlanningWeek(
+	weekStart: string,
+	dayFromMonday: number,
+	weekStartDay: number
+): string {
+	return addDays(weekStart, dayFromMonday - weekStartDay);
+}
+
+/**
  * Bucket a stored meal-plan week key into the current planning-week convention.
  * Keys written before a week-start-day change no longer equal any bucket start;
  * assigning by the key's midpoint (+3 days) puts the old 7-day span in the new
