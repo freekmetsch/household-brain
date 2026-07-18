@@ -58,9 +58,9 @@
 			{#each bodyPaths as pd}
 				<path
 					d={pd.d}
-					fill={pd.fill ? 'currentColor' : 'none'}
+					fill={pd.fill ? (pd.color ?? 'currentColor') : 'none'}
 					fill-rule="evenodd"
-					stroke={pd.fill ? 'none' : 'currentColor'}
+					stroke={pd.fill ? 'none' : (pd.color ?? 'currentColor')}
 					stroke-width={pd.sw}
 					opacity={pd.opacity}
 				/>

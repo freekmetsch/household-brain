@@ -1,5 +1,8 @@
 # Work Log
 
+## 2026-07-18 22:45 | html-artifact | design-shotgun: icon-colour
+Touched: docs/artifacts/2026-07-18-design-shotgun-icon-colour.html
+
 ## 2026-07-18 14:38 | html-artifact | ui: full-app
 Touched: docs/artifacts/2026-07-18-ui-full-app.html
 

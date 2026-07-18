@@ -19,6 +19,8 @@ export interface IconPathDef {
 	opacity?: number;
 	/** Per-path stroke-width override (stroke paths only). */
 	sw?: number;
+	/** Fixed paint (fill or stroke, per `fill`); omitted = currentColor. */
+	color?: string;
 }
 
 export type IconPath = string | IconPathDef;
