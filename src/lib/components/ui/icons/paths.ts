@@ -4,12 +4,35 @@
 // without {@html} / SVG-namespace pitfalls. 16×16 stroke style mirrors the
 // specimen's inline icon snippets (inventory/+page.svelte:579-593); the cart
 // keeps its native 24×24 heroicons geometry.
+//
+// This file holds the *Classic* set (the shipped default) plus the shared
+// types. Alternate full sets live in ./sets/ — every set covers the same
+// IconName inventory, so any of them can be swapped in app-wide at runtime
+// (see active.svelte.ts and the /design/icons picker).
+
+/** A path is either a bare stroke `d` string or an object with per-path
+ *  overrides. `fill: true` renders the path as a currentColor fill with no
+ *  stroke (duotone sets use this for soft backdrops and solid accent dots). */
+export interface IconPathDef {
+	d: string;
+	fill?: boolean;
+	opacity?: number;
+	/** Per-path stroke-width override (stroke paths only). */
+	sw?: number;
+}
+
+export type IconPath = string | IconPathDef;
 
 export interface IconDef {
 	viewBox: string;
 	sw: number;
-	paths: string[];
+	/** Stroke linecap/linejoin flavor; 'round' unless a set says otherwise. */
+	cap?: 'round' | 'square' | 'butt';
+	paths: IconPath[];
 }
+
+/** Normalize a path entry to its object form (shared by Icon + Spinner). */
+export const toPathDef = (p: IconPath): IconPathDef => (typeof p === 'string' ? { d: p } : p);
 
 export const ICONS = {
 	plus: { viewBox: '0 0 16 16', sw: 1.75, paths: ['M8 3.25v9.5M3.25 8h9.5'] },
