@@ -18,6 +18,14 @@ import { BITMAP } from './bitmap';
 import { CUTOUT } from './cutout';
 import { COIN_SET } from './coin';
 import { POSTER_AUTOMNE, POSTER_HIVER, POSTER_NUIT } from './poster';
+import { ZON } from './zon';
+import { AFFICHE } from './affiche';
+import { GLOED } from './gloed';
+import { KLEIN } from './klein';
+import { MEER } from './meer';
+import { DUET } from './duet';
+import { SCHADUW } from './schaduw';
+import { SJABLOON } from './sjabloon';
 import { BISTRO } from './bistro';
 import { SORBET } from './sorbet';
 import { SPECTRUM } from './spectrum';
@@ -37,6 +45,46 @@ const SETS = {
 		name: 'Atelier',
 		tagline: 'The current set — fine engraved lines with tiny tick details.',
 		icons: ATELIER
+	},
+	zon: {
+		name: 'Zon',
+		tagline: 'Subject against the sun: solid ink silhouette on a big flat disc in each icon’s own hue.',
+		icons: ZON
+	},
+	affiche: {
+		name: 'Affiche',
+		tagline: 'Every icon a small travel poster: cream margin, sky, sun, ground band, subject in the scene.',
+		icons: AFFICHE
+	},
+	gloed: {
+		name: 'Gloed',
+		tagline: 'Dusk in flat bands: three-tone sky, low glowing sun, true near-black silhouette.',
+		icons: GLOED
+	},
+	klein: {
+		name: 'Klein',
+		tagline: 'Vastness: a huge sun in the icon’s hue, the subject shrunk small on a thin ground line.',
+		icons: KLEIN
+	},
+	meer: {
+		name: 'Meer',
+		tagline: 'Lakeside: cold-ink subject on the shore, its hue carried by a small sun and broken reflections.',
+		icons: MEER
+	},
+	duet: {
+		name: 'Duet',
+		tagline: 'Day/night split field: warm and cool halves per icon, silhouette bridging both.',
+		icons: DUET
+	},
+	schaduw: {
+		name: 'Schaduw',
+		tagline: 'Late light: each silhouette in its own hue casting a flat offset shadow.',
+		icons: SCHADUW
+	},
+	sjabloon: {
+		name: 'Sjabloon',
+		tagline: 'Stencil knockout: Enamel’s candy colours, subjects punched clean through a rounded plate.',
+		icons: SJABLOON
 	},
 	bistro: {
 		name: 'Bistro',

@@ -5,7 +5,7 @@
 import type { IconName } from '../paths';
 import { repaintAtelier } from './recolor';
 
-const HUE: Record<IconName, string> = {
+export const SPECTRUM_HUE: Record<IconName, string> = {
 	plus: '#2f9e44',
 	minus: '#e0453a',
 	check: '#21a06b',
@@ -41,6 +41,6 @@ const HUE: Record<IconName, string> = {
 };
 
 export const SPECTRUM = repaintAtelier({
-	body: (name) => HUE[name],
+	body: (name) => SPECTRUM_HUE[name],
 	sw: 1.6
 });

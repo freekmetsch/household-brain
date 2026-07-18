@@ -33,10 +33,10 @@
 	<header>
 		<h1 class="text-xl font-semibold">Icon design shotgun</h1>
 		<p class="mt-1 text-sm text-base-content/60">
-			Round 2: colour. Atelier stays the reference; ten colour explorations follow — three
-			flat-poster colourways after Tom Haugomat's Huttopia posters (Automne, Hiver, Nuit) and
-			seven colour systems over the winning line work (accent, pastel field, natural hue, paint,
-			overprint, glow, enamel). Round-1 candidates ride along at the bottom. Tap
+			Round 3: poster iconography. Eight sets rethink the drawing itself after Tom Haugomat's
+			Huttopia posters — sun-behind-subject, framed mini-posters, dusk bands, vastness, lake
+			reflections, day/night splits, cast shadows, stencil knockouts — followed by round 2's
+			colour systems and the round-1 candidates. Tap
 			<span class="font-medium">Use this set</span> to restyle the whole app instantly — nav,
 			buttons, spinners, everything. The choice sticks on this device, so browse around and come
 			back to switch.

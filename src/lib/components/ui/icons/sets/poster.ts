@@ -12,19 +12,21 @@ import type { IconDef, IconName, IconPathDef } from '../paths';
 /** Palette slots: field = the poster background disc, subject = the main
  *  silhouette, mid = secondary shape, accent = the one pop colour, knock =
  *  details cut back to the field colour. */
-type Slot = 'field' | 'subject' | 'mid' | 'accent' | 'knock';
+export type Slot = 'field' | 'subject' | 'mid' | 'accent' | 'knock';
 export type PosterPalette = Record<Exclude<Slot, 'knock'>, string>;
 
-type Part = readonly [Slot, string];
+export type Part = readonly [Slot, string];
 
 /** Filled circle path centred (cx,cy) radius r. */
-const C = (cx: number, cy: number, r: number) =>
+export const C = (cx: number, cy: number, r: number) =>
 	`M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0Z`;
 
 /** The poster field every icon sits on. */
 const FIELD: Part = ['field', C(12, 12, 9.6)];
 
-const G: Record<IconName, readonly Part[]> = {
+/** Slot-tagged flat-silhouette geometry, shared by the poster colourways and
+ *  the round-3 scene compositions (see `scene-lib.ts`). */
+export const POSTER_GEOMETRY: Record<IconName, readonly Part[]> = {
 	plus: [FIELD, ['subject', 'M10.7 5.8h2.6V10.7h4.9v2.6h-4.9v4.9h-2.6v-4.9H5.8v-2.6h4.9V5.8Z']],
 	minus: [FIELD, ['subject', 'M5.8 10.7h12.4v2.6H5.8Z']],
 	check: [FIELD, ['subject', 'M10.6 16.7 5.9 12l1.8-1.8 2.9 2.9 5.6-6.1 1.9 1.7-7.5 8Z']],
@@ -239,11 +241,11 @@ const G: Record<IconName, readonly Part[]> = {
 const build = (pal: PosterPalette): Record<IconName, IconDef> => {
 	const paint = (slot: Slot) => (slot === 'knock' ? pal.field : pal[slot]);
 	const out = {} as Record<IconName, IconDef>;
-	for (const name of Object.keys(G) as IconName[]) {
+	for (const name of Object.keys(POSTER_GEOMETRY) as IconName[]) {
 		out[name] = {
 			viewBox: '0 0 24 24',
 			sw: 1.4,
-			paths: G[name].map(
+			paths: POSTER_GEOMETRY[name].map(
 				([slot, d]): IconPathDef => ({ d, fill: true, color: paint(slot) })
 			)
 		};

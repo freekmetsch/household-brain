@@ -7,7 +7,7 @@ import type { IconName } from '../paths';
 import { COIN_SET } from './coin';
 import { tintFills } from './recolor';
 
-const COLOR: Record<IconName, string> = {
+export const ENAMEL_COLOR: Record<IconName, string> = {
 	plus: '#3e9b4f',
 	minus: '#e5484d',
 	check: '#2f9e68',
@@ -42,4 +42,4 @@ const COLOR: Record<IconName, string> = {
 	apple: '#d93036'
 };
 
-export const ENAMEL = tintFills(COIN_SET, COLOR);
+export const ENAMEL = tintFills(COIN_SET, ENAMEL_COLOR);
