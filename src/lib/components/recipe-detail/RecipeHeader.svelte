@@ -1,7 +1,8 @@
 <!--
-	Sticky page header for the recipe detail route: back link, photo thumb,
-	title, "+ Plan" shortcut, and the ⋯ overflow menu (owns the menu open state,
-	roving focus, and click-away). Translation + image-upload status rows ride
+	Sticky page header for the recipe detail route: back link, title, "+ Plan"
+	shortcut, and the ⋯ overflow menu (owns the menu open state, roving focus,
+	and click-away). Edit, photo, roles, and AI actions all live in the menu —
+	the toolbar itself stays two actions wide. Translation status rows ride
 	along under the toolbar. All actions are page-level and arrive as callbacks.
 -->
 <script lang="ts">
@@ -20,11 +21,10 @@
 		viewLang,
 		translationLoading,
 		translationMessage,
-		imageUploading,
-		imageUploadError,
 		onAddToPlan,
 		onToggleLanguage,
 		onEditRaw,
+		rolesMenuLabel,
 		hasCookProgress,
 		onResetCookProgress,
 		onRegenerateCookMode,
@@ -39,11 +39,12 @@
 		viewLang: 'en' | 'nl';
 		translationLoading: boolean;
 		translationMessage: string;
-		imageUploading: boolean;
-		imageUploadError: string;
 		onAddToPlan: () => void;
 		onToggleLanguage: () => void;
 		onEditRaw: () => void;
+		// Non-null once every ingredient has a role: the inline coverage panel
+		// collapses into this quiet menu entry (label carries the n/n count).
+		rolesMenuLabel: string | null;
 		hasCookProgress: boolean;
 		onResetCookProgress: () => void;
 		onRegenerateCookMode: () => void;
@@ -125,20 +126,6 @@
 			class="btn btn-ghost btn-sm h-9 min-h-0 w-9 shrink-0 p-0"
 			aria-label={m.recipes_header_back_aria()}><Icon name="chevronLeft" /></a
 		>
-		<button
-			type="button"
-			class="shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-base-200 border border-base-200 flex items-center justify-center text-base-content/40 text-sm"
-			onclick={pickPhoto}
-			aria-label={recipe.imageUrl ? m.recipes_header_replace_photo() : m.recipes_header_add_photo()}
-		>
-			{#if recipe.imageUrl}
-				<img src={recipe.imageUrl} alt="" class="w-full h-full object-cover" loading="lazy" />
-			{:else if imageUploading}
-				<Spinner size="xs" />
-			{:else}
-				<span aria-hidden="true">📷</span>
-			{/if}
-		</button>
 		<h1 class="text-[15px] font-semibold leading-tight flex-1 min-w-0 truncate">{displayTitle}</h1>
 		<button
 			class="btn btn-sm btn-primary shrink-0 gap-1"
@@ -146,15 +133,6 @@
 				onAddToPlan();
 			}}><Icon name="plus" class="h-3.5 w-3.5" /> {m.recipes_header_plan_button()}</button
 		>
-		<button
-			type="button"
-			class="btn btn-sm btn-ghost h-9 min-h-9 shrink-0 border border-base-300 px-2"
-			onclick={onEditRaw}
-			aria-label={m.recipes_edit_heading()}
-		>
-			<span aria-hidden="true">✎</span>
-			<span class="hidden sm:inline">{m.recipes_edit_heading()}</span>
-		</button>
 		<div class="relative shrink-0" data-recipe-menu>
 			<button
 				bind:this={menuButton}
@@ -176,6 +154,38 @@
 					transition:fly={{ y: -4, duration: MOTION_MICRO_MS }}
 					onkeydown={handleMenuKeydown}
 				>
+					<li>
+						<button
+							type="button"
+							role="menuitem"
+							data-recipe-menu-item
+							class="w-full text-left px-3 py-2 hover:bg-base-200"
+							onclick={menuAction(onEditRaw)}>✎ {m.recipes_edit_heading()}</button
+						>
+					</li>
+					{#if rolesMenuLabel}
+						<li>
+							<button
+								type="button"
+								role="menuitem"
+								data-recipe-menu-item
+								class="w-full text-left px-3 py-2 hover:bg-base-200"
+								onclick={menuAction(onEditRaw)}>✓ {rolesMenuLabel}</button
+							>
+						</li>
+					{/if}
+					<li>
+						<button
+							type="button"
+							role="menuitem"
+							data-recipe-menu-item
+							class="w-full text-left px-3 py-2 hover:bg-base-200"
+							onclick={pickPhoto}
+							>📷 {recipe.imageUrl
+								? m.recipes_header_replace_photo()
+								: m.recipes_header_add_photo()}</button
+						>
+					</li>
 					{#if hasCookProgress}
 						<li>
 							<button
@@ -268,8 +278,5 @@
 			onclick={() => onRetryTranslation(true)}
 			>{m.recipes_translation_failed_retry()}</button
 		>
-	{/if}
-	{#if imageUploadError}
-		<p class="px-3 pb-2 text-[11px] text-error">{imageUploadError}</p>
 	{/if}
 </header>

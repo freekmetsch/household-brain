@@ -1,7 +1,9 @@
 <!--
-	Meta chips: only what's set gets shown — no "At a glance" label, no "Unset"
-	tiles (show, don't tell). Tags ride the same row. Notes render as a soft
-	panel underneath. Renders nothing when the recipe has no metadata at all.
+	Meta strip: the recipe's basic facts only — servings, time, rating,
+	cuisine/category — as one quiet icon-led row. Tags and notes are deliberately
+	NOT here (tags ride at the page bottom, notes get their own bottom section):
+	the top of the page belongs to orientation, not metadata noise.
+	Renders nothing when the recipe has no basic facts at all.
 -->
 <script lang="ts">
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
@@ -11,13 +13,11 @@
 	let {
 		recipe,
 		displayCategory,
-		displayCuisine,
-		displayNotes
+		displayCuisine
 	}: {
 		recipe: Recipe;
 		displayCategory: string | null;
 		displayCuisine: string | null;
-		displayNotes: string | null;
 	} = $props();
 
 	function stars(rating: number): string {
@@ -25,29 +25,32 @@
 	}
 </script>
 
-{#if recipe.servings || recipe.totalTimeMin || recipe.rating || displayCuisine || displayCategory || recipe.tags.length || displayNotes}
-	<section class="mx-3 mt-3 flex flex-col gap-2">
-		<div class="flex flex-wrap items-center gap-1.5">
-			{#if recipe.servings}
-				<span class="ui-chip-muted">{m.recipes_meta_servings({ count: recipe.servings })}</span>
-			{/if}
-			{#if recipe.totalTimeMin}
-				<span class="ui-chip-muted"><Icon name="clock" class="h-3 w-3" />{recipe.totalTimeMin} min</span>
-			{/if}
-			{#if recipe.rating}
-				<span class="ui-chip-muted"><span class="text-warning">{stars(recipe.rating)}</span></span>
-			{/if}
-			{#if displayCuisine ?? displayCategory}
-				<span class="ui-chip-muted">{displayCuisine ?? displayCategory}</span>
-			{/if}
-			{#each recipe.tags as tag}
-				<span class="ui-chip-muted">{tag}</span>
-			{/each}
-		</div>
-		{#if displayNotes}
-			<p class="rounded-xl bg-base-200/50 px-3 py-2 text-sm leading-snug text-base-content/75">
-				{displayNotes}
-			</p>
+{#if recipe.servings || recipe.totalTimeMin || recipe.rating || displayCuisine || displayCategory}
+	<section
+		class="mx-3 mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-base-200 bg-base-100 px-3 py-2.5 text-[13px] text-base-content/75"
+	>
+		{#if recipe.servings}
+			<span class="inline-flex items-center gap-1.5">
+				<Icon name="cutlery" class="h-3.5 w-3.5 text-base-content/45" />
+				{m.recipes_meta_servings({ count: recipe.servings })}
+			</span>
+		{/if}
+		{#if recipe.totalTimeMin}
+			<span class="inline-flex items-center gap-1.5">
+				<Icon name="clock" class="h-3.5 w-3.5 text-base-content/45" />
+				{recipe.totalTimeMin} min
+			</span>
+		{/if}
+		{#if displayCuisine ?? displayCategory}
+			<span class="inline-flex items-center gap-1.5">
+				<Icon name="chefHat" class="h-3.5 w-3.5 text-base-content/45" />
+				{displayCuisine ?? displayCategory}
+			</span>
+		{/if}
+		{#if recipe.rating}
+			<span class="text-warning tracking-tight" aria-label={`${recipe.rating}/5`}
+				>{stars(recipe.rating)}</span
+			>
 		{/if}
 	</section>
 {/if}

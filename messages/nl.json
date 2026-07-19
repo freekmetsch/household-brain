@@ -12,14 +12,12 @@
 	"login_username_label": "Gebruikersnaam",
 	"login_password_label": "Wachtwoord",
 	"login_signin_button": "Inloggen",
-
 	"home_expiry_days_expired": "{days}d verlopen",
 	"home_expiry_today": "Vandaag",
 	"home_expiry_tomorrow": "Morgen",
 	"home_expiry_days_left": "{days}d",
 	"home_expiring_soon_label": "Binnenkort verlopen:",
 	"home_dismiss_aria": "Sluiten",
-
 	"mealplan_toast_could_not_add": "Kon de maaltijd niet toevoegen.",
 	"mealplan_toast_could_not_update": "Kon de maaltijd niet bijwerken.",
 	"mealplan_toast_could_not_restore": "Kon de maaltijd niet herstellen.",
@@ -74,7 +72,6 @@
 	"mealplan_consume_desc_suffix": "kwamen uit de vriezer? ({count} op voorraad)",
 	"mealplan_consume_button": "Haal {count} eruit",
 	"mealplan_consume_toast_failed": "Kon de vriezervoorraad niet bijwerken.",
-
 	"recipes_toast_could_not_create_meal": "Kon de maaltijd niet aanmaken",
 	"recipes_toast_connection_error": "Verbindingsfout",
 	"recipes_toast_scraping_failed": "Importeren mislukt",
@@ -127,7 +124,6 @@
 	"recipes_import_sheet_title": "Recept importeren via URL",
 	"recipes_url_aria": "Recept-URL",
 	"recipes_fetching_label": "Recept ophalen…",
-
 	"recipes_toast_image_too_large": "Afbeelding groter dan 5MB",
 	"recipes_toast_upload_failed": "Uploaden mislukt ({status})",
 	"recipes_toast_connection_failed": "Verbinding mislukt",
@@ -140,7 +136,6 @@
 	"recipes_confirm_reset_cook_progress": "Dit recept opnieuw starten en de timers wissen?",
 	"recipes_ai_roles_prefill": "Deel de ingrediënten van {title} in als meekoken of vers serveren",
 	"recipes_title_suffix": "Recepten",
-
 	"recipes_header_back_aria": "Terug naar recepten",
 	"recipes_header_replace_photo": "Foto vervangen",
 	"recipes_header_add_photo": "Foto toevoegen",
@@ -152,13 +147,10 @@
 	"recipes_header_regenerate_cook_mode": "Kookweergave opnieuw maken",
 	"recipes_header_reset_cook_progress": "Opnieuw beginnen met koken",
 	"recipes_header_retranslate": "Opnieuw vertalen naar Engels",
-	"recipes_header_ai_edit": "AI-bewerking",
 	"recipes_header_remove_photo": "Foto verwijderen",
 	"recipes_header_open_source": "Bron openen",
 	"recipes_header_translating": "Recept wordt vertaald…",
-
 	"recipes_meta_servings": "{count} porties",
-
 	"recipes_meal_combines_label": "Maaltijdrecept · combineert",
 	"recipes_meal_remove_aria": "Verwijder {title} uit deze maaltijd",
 	"recipes_meal_removed_toast": "{title} verwijderd",
@@ -170,7 +162,6 @@
 	"recipes_meal_add_sheet_title": "Voeg een recept toe aan deze maaltijd",
 	"recipes_meal_search_placeholder": "Zoek recepten…",
 	"recipes_meal_no_matching": "Geen overeenkomende recepten.",
-
 	"recipes_addplan_sheet_title": "Toevoegen aan maaltijdplan",
 	"recipes_addplan_week_label": "Week {number}",
 	"recipes_addplan_add_button": "Toevoegen",
@@ -180,29 +171,16 @@
 	"recipes_addplan_source_label": "Hoe maak je het klaar?",
 	"recipes_addplan_source_freezer": "Uit de vriezer serveren ({count} op voorraad)",
 	"recipes_addplan_source_fresh": "Vers koken",
-
 	"recipes_aiedit_placeholder": "bv. maak het veganistisch, halveer de hoeveelheden…",
 	"recipes_aiedit_close_aria": "Sluit AI-bewerking",
-
 	"recipes_freezer_week_of": "Week van {date}",
 	"recipes_freezer_toast_save_failed": "Opslaan mislukt ({status})",
-	"recipes_freezer_toast_generic_failed": "Mislukt ({status})",
 	"recipes_freezer_portions_of_target": "{frozen} / {target} porties",
 	"recipes_freezer_below_target_suffix": " — onder doel",
 	"recipes_freezer_portion_singular_in_freezer": "{count} portie in de vriezer",
 	"recipes_freezer_portions_plural_in_freezer": "{count} porties in de vriezer",
 	"recipes_freezer_keep_stocked_label": "Op voorraad houden",
 	"recipes_freezer_target_portions_label": "Streefaantal porties",
-	"recipes_freezer_serve_button": "Serveren uit de vriezer",
-	"recipes_freezer_needs_roles_prefix": "Serveren uit de vriezer vereist ingrediëntrollen —",
-	"recipes_freezer_set_roles_link": "stel ze in met AI",
-	"recipes_freezer_fresh_needed_label": "Verse items nog nodig:",
-	"recipes_freezer_added_to_shopping": "Toegevoegd aan boodschappenlijst van {week}",
-	"recipes_freezer_open_shopping_link": "Open boodschappenlijst",
-	"recipes_freezer_add_to_week_label": "Toevoegen aan week",
-	"recipes_freezer_add_to_shopping_button": "Voeg {count} toe aan boodschappenlijst",
-	"recipes_freezer_nothing_fresh": "Niets vers te kopen — alle vers-serveer-items zijn op voorraad ✓",
-
 	"recipes_import_banner_title": "Geïmporteerd — even controleren",
 	"recipes_import_reason_default": "Sommige velden zijn mogelijk onvolledig.",
 	"recipes_import_reason_title": "De titel is mogelijk niet correct.",
@@ -214,7 +192,6 @@
 	"recipes_import_toast_dismiss_failed": "Kon niet negeren ({status})",
 	"recipes_import_toast_connection_failed": "Verbinding mislukt — tik om opnieuw te proberen",
 	"recipes_import_toast_clear_failed": "Kon de controlemarkering niet wissen.",
-
 	"recipes_edit_confirm_discard": "Niet-opgeslagen wijzigingen weggooien?",
 	"recipes_edit_toast_save_failed": "Kon recept niet opslaan.",
 	"recipes_edit_title_label": "Titel",
@@ -239,7 +216,6 @@
 	"recipes_edit_notes_placeholder": "Optionele notities — vervangingen, tips…",
 	"recipes_edit_save_button": "Opslaan",
 	"recipes_edit_saved_button": "Opgeslagen",
-
 	"recipes_freeze_heading": "Restjes invriezen?",
 	"recipes_freeze_desc_prefix": "Voeg ingevroren porties van",
 	"recipes_freeze_desc_suffix": "toe aan de vriezer, gekoppeld aan dit recept.",
@@ -252,13 +228,12 @@
 	"recipes_freeze_toast_connection_failed": "Verbinding mislukt.",
 	"recipes_freeze_skip_button": "Overslaan",
 	"recipes_freeze_button": "Vries {count} in",
-
 	"recipes_fallback_retry_button": "opnieuw proberen",
 	"recipes_fallback_servings_label": "Porties",
+	"recipes_notes_heading": "Notities",
 	"recipes_fallback_in_stock_title": "Op voorraad",
 	"recipes_fallback_in_stock_badge": "op voorraad",
 	"recipes_fallback_timer_done": "Klaar!",
-
 	"settingsshell_panel_display": "Weergave",
 	"settingsshell_panel_ai": "AI",
 	"settingsshell_panel_recipes": "Recepten",
@@ -296,9 +271,7 @@
 	"settingsshell_toast_cap_saved": "{label} limiet opgeslagen",
 	"settingsshell_per_day_suffix": "/dag",
 	"settingsshell_reset_button": "Reset",
-
 	"ui_bottomsheet_close": "Sluiten",
-
 	"inventory_title": "Voorraad · Household Brain",
 	"inventory_heading": "Voorraad",
 	"inventory_activity_aria": "Recente activiteit",
@@ -334,14 +307,11 @@
 	"inventory_empty_add_first_button": "Voeg het eerste item toe",
 	"inventory_empty_filtered_title": "Niets komt overeen met deze filters.",
 	"inventory_clear_filters_button": "Filters wissen",
-
 	"inventory_section_freezer": "Vriezer",
 	"inventory_section_pantry": "Voorraadkast",
-
 	"inventory_activity_title": "Recente activiteit",
 	"inventory_activity_loading": "Laden…",
 	"inventory_activity_empty": "Nog geen activiteit.",
-
 	"inventory_addform_name_label": "Naam",
 	"inventory_addform_name_placeholder": "bv. Spinazie",
 	"inventory_addform_kind_label": "Soort",
@@ -359,10 +329,8 @@
 	"inventory_addform_saving": "Opslaan…",
 	"inventory_addform_submit_button": "Toevoegen aan voorraad",
 	"inventory_toast_add_item_failed": "Kon item niet toevoegen",
-
 	"inventory_facet_all": "Alle",
 	"inventory_facet_review_count": "{count} controle",
-
 	"inventory_review_reason_undo_conflict": "Gewijzigd sinds die actie — ongedaan maken overgeslagen",
 	"inventory_review_reason_unclassified": "Voedselklasse ontbreekt",
 	"inventory_review_reason_unknown_kind": "Controleer de soort",
@@ -393,13 +361,11 @@
 	"inventory_set_portions_button": "Porties instellen",
 	"inventory_fix_button": "Herstellen",
 	"inventory_resolve_button": "Oplossen",
-
 	"inventory_ghost_cook_again_button": "Opnieuw koken",
 	"inventory_ghost_portions_with_target": "0 / {target} porties",
 	"inventory_ghost_portions_no_target": "0 porties",
 	"inventory_ghost_stop_button": "Stop met op voorraad houden",
 	"inventory_toast_ghost_opt_out": "{title} wordt niet meer op voorraad gehouden",
-
 	"inventory_editor_name_label": "Naam",
 	"inventory_editor_qty_label": "Hoeveelheid",
 	"inventory_editor_unit_label": "Eenheid",
@@ -419,27 +385,22 @@
 	"inventory_editor_used_in_singular": "Gebruikt in {count} recept",
 	"inventory_editor_used_in_plural": "Gebruikt in {count} recepten",
 	"inventory_editor_history_label": "Geschiedenis",
-
 	"inventory_row_edit_aria": "Bewerk {name}",
 	"inventory_row_needs_review_title": "Controle nodig",
-
 	"inventory_link_sheet_title": "Koppel een recept aan {name}",
 	"inventory_link_sheet_title_default": "Recept koppelen",
 	"inventory_link_search_placeholder": "Zoek recepten…",
 	"inventory_link_no_match": "Geen recepten komen overeen met \"{query}\".",
-
 	"inventory_qty_aria": "Hoeveelheid voor {name}",
 	"inventory_qty_save_aria": "Hoeveelheid opslaan",
 	"inventory_qty_set_placeholder": "hoeveelheid instellen",
 	"inventory_qty_edit_aria": "Bewerk hoeveelheid voor {name}",
 	"inventory_qty_decrease_aria": "Verlaag {name}",
 	"inventory_qty_increase_aria": "Verhoog {name}",
-
 	"inventory_staples_label": "Basisproducten",
 	"inventory_staples_on_list": "✓ op lijst",
 	"inventory_staples_add_aria": "Voeg {name} toe aan de boodschappenlijst van deze week",
 	"inventory_staples_add_button": "+ lijst",
-
 	"shopping_title": "Boodschappen · Household Brain",
 	"shopping_heading": "Boodschappen",
 	"shopping_review_ah_order": "AH-bestelling controleren",
@@ -542,7 +503,6 @@
 	"shopping_week_of_label": "Week van",
 	"shopping_back_to_week_button": "Terug naar deze week",
 	"shopping_next_week_aria": "Volgende week",
-
 	"settings_account_title": "Account - Instellingen",
 	"settings_account_password_mismatch": "Wachtwoorden komen niet overeen",
 	"settings_account_change_password_failed": "Kon wachtwoord niet wijzigen",
@@ -555,7 +515,6 @@
 	"settings_account_saving_label": "Opslaan...",
 	"settings_account_update_password_button": "Wachtwoord bijwerken",
 	"settings_account_logout_button": "Uitloggen",
-
 	"settings_advanced_title": "Geavanceerd - Instellingen",
 	"settings_model_heading": "Model",
 	"settings_advanced_vision_label": "Vision-model",
@@ -574,7 +533,6 @@
 	"settings_advanced_pricing_heading": "Prijs-overrides per model",
 	"settings_advanced_pricing_desc_a": "vars per model (bv.",
 	"settings_advanced_pricing_desc_b": ") — fallback USD/M-token tarieven, alleen gebruikt als een provider zijn eigen kosten niet doorgeeft. Zelden nodig; zie",
-
 	"settings_ai_title": "AI - Instellingen",
 	"settings_ai_usage_caps_heading": "Gebruik & limieten",
 	"settings_ai_spend_tooltip": "EUR {amount}",
@@ -601,7 +559,6 @@
 	"settings_ai_chat_model_label": "Chatmodel",
 	"settings_ai_fallback_model_label": "Fallback-model",
 	"settings_ai_fallback_model_hint": "Gebruikt wanneer het chatmodel midden in een beurt een fout geeft.",
-
 	"settings_connections_title": "Verbindingen - Instellingen",
 	"settings_connections_ah_heading": "Albert Heijn",
 	"settings_connections_status_connected": "verbonden",
@@ -630,7 +587,6 @@
 	"settings_connections_connect_failed": "Kon niet verbinden met Albert Heijn.",
 	"settings_connections_connected_toast": "Verbonden met AH",
 	"settings_connections_connected_as_toast": "Verbonden met AH als {name}",
-
 	"settings_data_title": "Gegevens - Instellingen",
 	"settings_data_export_heading": "Exporteren",
 	"settings_data_export_button": "Exporteren als JSON",
@@ -651,7 +607,6 @@
 	"settings_data_reset_confirm_body_plural": "Dit verwijdert permanent {count} rijen uit {label}. Typ {label} om te bevestigen.",
 	"settings_data_cancel_button": "Annuleren",
 	"settings_data_delete_button": "Verwijderen",
-
 	"settings_recipes_title": "Recepten - Instellingen",
 	"settings_recipes_language_label": "Recepttaal",
 	"settings_recipes_default_sort_label": "Standaardsortering",
@@ -667,7 +622,6 @@
 	"settings_recipes_cookmode_pregen_hint": "Bouw het stap-voor-stap kookmodusblad meteen na import, in plaats van bij de eerste keer openen.",
 	"settings_recipes_saved_autotranslate": "Automatisch vertalen opgeslagen",
 	"settings_recipes_saved_cookmode_pregen": "Kookmodus-voorgeneratie opgeslagen",
-
 	"benchsheet_ready_title": "De bijgewerkte kookweergave is klaar.",
 	"benchsheet_ready_desc": "Je huidige weergave blijft open zodat lopende timers niet verloren gaan.",
 	"benchsheet_switch_button": "Update gebruiken",
@@ -684,6 +638,8 @@
 	"benchsheet_notif_primer_desc": "Sta meldingen toe zodat timers afgaan, ook als je even wegswipet. Geluid en trilling werken altijd in de kookweergave.",
 	"benchsheet_notif_allow_button": "Toestaan",
 	"benchsheet_notif_not_now_button": "Niet nu",
+	"benchsheet_view_cooking": "Kookweergave",
+	"benchsheet_view_original": "Origineel recept",
 	"benchsheet_mise_label": "Mise",
 	"benchsheet_mise_collapse": "Tik om in te klappen",
 	"benchsheet_mise_progress": "{done}/{total} klaar · {preview}",
@@ -694,7 +650,6 @@
 	"benchsheet_cook_button": "Ik heb het gekookt",
 	"benchsheet_cooked_logged": "✓ Vastgelegd",
 	"benchsheet_cook_failed": "Kon deze kooksessie niet vastleggen. Probeer opnieuw.",
-
 	"cookmode_merge_from_prefix": "Van ",
 	"cookmode_timer_expand_aria": "Timer uitklappen",
 	"cookmode_timer_minimize_aria": "Timer minimaliseren",
@@ -706,7 +661,6 @@
 	"cookmode_timerchip_done_label": "klaar",
 	"cookmode_timerstack_more_aria": "{count} timers meer",
 	"cookmode_timerstack_more_label": "+{count} meer",
-
 	"chat_attach_max_photos": "Maximaal {max} foto's tegelijk.",
 	"chat_attach_invalid_type": "Alleen foto's (JPG, PNG, WEBP, GIF).",
 	"chat_attach_too_large": "Die foto is te groot.",
@@ -787,7 +741,6 @@
 	"recipes_edit_substitute_kind": "Type",
 	"recipes_edit_substitute_note": "Wanneer of hoe te gebruiken (optioneel)",
 	"recipes_edit_substitute_remove_aria": "Verwijder alternatief {name}",
-
 	"mealplan_settings_aria": "Maaltijdplanning-instellingen",
 	"mealplan_delivery_label": "Bezorging {date}",
 	"mealplan_day_picker_aria": "Dag voor {dinner}",

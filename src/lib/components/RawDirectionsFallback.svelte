@@ -3,8 +3,8 @@
 	reached, no cached cookModeJson, but recipe.directions[] still exists.
 
 	Mirrors the legacy /recipes/[slug] layout (ingredients with stock badges,
-	servings scaler, numbered directions with naive timer extraction, notes)
-	so a cook isn't blocked by a paused AI budget.
+	servings scaler, numbered directions with naive timer extraction) so a cook
+	isn't blocked by a paused AI budget. Notes render once, at the page bottom.
 
 	The banner at the top explains the fallback and offers a retry button so
 	the cook can ask for the bench sheet again later (e.g. once the cap rolls
@@ -22,7 +22,6 @@
 		directions: string[];
 		ingredients: Ingredient[];
 		ingredientStock: boolean[];
-		notes: string | null;
 		viewLang: 'en' | 'nl';
 		servings: number | null;
 		// Optional: the generating path renders its own progress banner above
@@ -38,7 +37,6 @@
 		directions,
 		ingredients,
 		ingredientStock,
-		notes,
 		viewLang,
 		servings,
 		bannerMessage,
@@ -177,9 +175,5 @@
 				</li>
 			{/each}
 		</ol>
-	{/if}
-
-	{#if notes}
-		<div class="rounded-xl bg-base-200 p-3 text-sm text-base-content/70">{notes}</div>
 	{/if}
 </div>

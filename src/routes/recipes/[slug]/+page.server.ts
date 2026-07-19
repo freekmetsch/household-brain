@@ -7,8 +7,7 @@ import type { Ingredient } from '$lib/server/db/schema';
 import { namesMatch } from '$lib/match';
 import {
 	expandedIngredientRoleCoverage,
-	frozenPortionsByRecipe,
-	serveFreshForRecipe
+	frozenPortionsByRecipe
 } from '$lib/server/recipe_links';
 import { mealsContaining, subRecipesOf } from '$lib/server/meal_recipes';
 import { getMealPlanPrefs } from '$lib/server/meal_plan/prefs';
@@ -47,10 +46,9 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 	const subRecipes = subRecipesOf(db, recipe.id);
 	const partOfMeals = mealsContaining(db, recipe.id);
 
-	// P4.3 recipe → stock direction: frozen portions of this recipe's leftover on
-	// hand + the deterministic serve-fresh completion list (fresh − stock, Dutch).
+	// P4.3 recipe → stock direction: frozen portions of this recipe's leftover
+	// on hand.
 	const frozenPortions = frozenPortionsByRecipe(db).get(recipe.id) ?? 0;
-	const serveFresh = serveFreshForRecipe(db, recipe, stockNames, subRecipes);
 	const roleCoverage = expandedIngredientRoleCoverage(db, recipe, subRecipes);
 
 	return {
@@ -59,10 +57,7 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 		recipeLang,
 		ingredientStock,
 		frozenPortions,
-		serveFresh,
-		hasRoles: roleCoverage.complete,
 		roleCoverage,
-		currentWeekStart,
 		subRecipes,
 		partOfMeals
 	};

@@ -54,7 +54,7 @@
 
 	$effect(() => {
 		if (!chatAgent || !$page.route.id) return;
-		return chatAgent.publishScreen(fallbackScreen($page.route.id));
+		return chatAgent.publishScreen(fallbackScreen($page.route.id), { fallback: true });
 	});
 
 	let mainEl = $state<HTMLElement>();

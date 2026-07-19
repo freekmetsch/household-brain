@@ -252,37 +252,41 @@
 		}}
 		class="flex flex-col gap-4"
 	>
-		<label class="ui-form-card flex flex-col gap-1.5">
-			<span class="ui-field-label">{m.recipes_edit_title_label()}</span>
-			<input
-				type="text"
-				name="title"
-				bind:value={title}
-				required
-				class="input input-bordered input-sm"
-			/>
-		</label>
-
-		<div class="grid grid-cols-[1fr_6rem] gap-3">
-			<label class="ui-form-card flex flex-col gap-1.5">
-				<span class="ui-field-label">{m.recipes_edit_language_label()}</span>
-				<select bind:value={language} name="language" class="select select-bordered select-sm">
-					<option value="nl">{m.recipes_edit_language_dutch()}</option>
-					<option value="en">{m.recipes_edit_language_english()}</option>
-				</select>
-			</label>
-			<label class="ui-form-card flex flex-col gap-1.5">
-				<span class="ui-field-label">{m.recipes_edit_servings_label()}</span>
+		<!-- One card for the recipe's identity: title on top, language +
+		     servings side by side. Three separate labeled cards was three
+		     borders and three headings for four fields. -->
+		<section class="ui-form-card flex flex-col gap-2.5">
+			<label class="flex flex-col gap-1.5">
+				<span class="ui-field-label">{m.recipes_edit_title_label()}</span>
 				<input
-					type="number"
-					name="servings"
-					min="1"
-					max="99"
-					bind:value={servings}
+					type="text"
+					name="title"
+					bind:value={title}
+					required
 					class="input input-bordered input-sm"
 				/>
 			</label>
-		</div>
+			<div class="grid grid-cols-[1fr_6rem] gap-3">
+				<label class="flex flex-col gap-1.5">
+					<span class="ui-field-label">{m.recipes_edit_language_label()}</span>
+					<select bind:value={language} name="language" class="select select-bordered select-sm">
+						<option value="nl">{m.recipes_edit_language_dutch()}</option>
+						<option value="en">{m.recipes_edit_language_english()}</option>
+					</select>
+				</label>
+				<label class="flex flex-col gap-1.5">
+					<span class="ui-field-label">{m.recipes_edit_servings_label()}</span>
+					<input
+						type="number"
+						name="servings"
+						min="1"
+						max="99"
+						bind:value={servings}
+						class="input input-bordered input-sm"
+					/>
+				</label>
+			</div>
+		</section>
 
 		<section class="ui-form-card">
 			<div class="flex items-baseline gap-2 mb-2">
@@ -291,36 +295,51 @@
 					>{m.recipes_edit_add_ingredient_button()}</button
 				>
 			</div>
-			<div class="flex flex-col gap-2.5">
+			<div class="flex flex-col gap-2">
 				{#each ingredients as ing, i (i)}
-					<div class="rounded-xl border border-base-300/70 bg-base-200/45 p-2.5">
-						<label class="flex min-w-0 flex-col gap-1">
-							<span class="ui-field-label">{m.recipes_edit_name_label()}</span>
-							<input type="text" bind:value={ing.name} class="input input-bordered input-sm w-full" />
-						</label>
-						<div class="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 sm:grid-cols-[6rem_6rem_minmax(0,1fr)_2.25rem]">
-							<label class="flex min-w-0 flex-col gap-1">
-								<span class="ui-field-label">{m.recipes_edit_amount_label()}</span>
-								<input type="text" bind:value={ing.amount} class="input input-bordered input-sm min-w-0 w-full" />
-							</label>
-							<label class="flex min-w-0 flex-col gap-1">
-								<span class="ui-field-label">{m.recipes_edit_unit_label()}</span>
-								<input type="text" bind:value={ing.unit} class="input input-bordered input-sm min-w-0 w-full" />
-							</label>
-							<label class="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-1">
-								<span class="ui-field-label">{m.recipes_edit_role_label()}</span>
-								<select bind:value={ing.role} class="select select-bordered select-sm min-w-0 w-full">
-									<option value={undefined}>{m.recipes_edit_role_unclassified()}</option>
-									<option value="cook_in">{m.recipes_edit_role_cook_in()}</option>
-									<option value="serve_fresh">{m.recipes_edit_role_serve_fresh()}</option>
-								</select>
-							</label>
+					<div class="rounded-xl border border-base-300/70 bg-base-200/45 p-2">
+						<!-- Two compact lines instead of four labeled fields: the
+						     placeholders + aria-labels carry the field names, the
+						     grid keeps rows scannable as a list. -->
+						<div class="flex items-center gap-1.5">
+							<input
+								type="text"
+								bind:value={ing.name}
+								placeholder={m.recipes_edit_name_label()}
+								aria-label={m.recipes_edit_name_label()}
+								class="input input-bordered input-sm min-w-0 flex-1"
+							/>
 							<button
 								type="button"
-								class="btn btn-ghost h-9 min-h-9 w-9 self-end p-0 text-error"
+								class="btn btn-ghost h-9 min-h-9 w-9 shrink-0 p-0 text-error"
 								aria-label={m.recipes_edit_remove_ingredient_aria()}
 								onclick={() => removeIngredient(i)}><Icon name="x" class="h-3.5 w-3.5" /></button
 							>
+						</div>
+						<div class="mt-1.5 grid grid-cols-[4.5rem_4rem_minmax(0,1fr)] gap-1.5">
+							<input
+								type="text"
+								bind:value={ing.amount}
+								placeholder={m.recipes_edit_amount_label()}
+								aria-label={m.recipes_edit_amount_label()}
+								class="input input-bordered input-sm min-w-0 w-full"
+							/>
+							<input
+								type="text"
+								bind:value={ing.unit}
+								placeholder={m.recipes_edit_unit_label()}
+								aria-label={m.recipes_edit_unit_label()}
+								class="input input-bordered input-sm min-w-0 w-full"
+							/>
+							<select
+								bind:value={ing.role}
+								aria-label={m.recipes_edit_role_label()}
+								class="select select-bordered select-sm min-w-0 w-full"
+							>
+								<option value={undefined}>{m.recipes_edit_role_unclassified()}</option>
+								<option value="cook_in">{m.recipes_edit_role_cook_in()}</option>
+								<option value="serve_fresh">{m.recipes_edit_role_serve_fresh()}</option>
+							</select>
 						</div>
 
 						<details class="mt-2 rounded-lg border border-base-300/60 bg-base-100/60">
@@ -335,31 +354,38 @@
 								<div class="space-y-2">
 									{#each ing.substitutes ?? [] as substitute, substituteIndex}
 										<div class="rounded-lg border border-base-300/60 bg-base-200/35 p-2">
-											<div class="grid grid-cols-[minmax(0,1fr)_7rem_2.25rem] gap-2">
-												<label class="flex min-w-0 flex-col gap-1">
-													<span class="ui-field-label">{m.recipes_edit_substitute_name()}</span>
-													<input type="text" bind:value={substitute.name} class="input input-bordered input-sm min-w-0 w-full" />
-												</label>
-												<label class="flex min-w-0 flex-col gap-1">
-													<span class="ui-field-label">{m.recipes_edit_substitute_kind()}</span>
-													<select bind:value={substitute.kind} class="select select-bordered select-sm min-w-0 w-full">
-														<option value="protein">{m.recipes_substitutes_kind_protein()}</option>
-														<option value="spice">{m.recipes_substitutes_kind_spice()}</option>
-														<option value="vegetable">{m.recipes_substitutes_kind_vegetable()}</option>
-														<option value="other">{m.recipes_substitutes_kind_other()}</option>
-													</select>
-												</label>
+											<div class="grid grid-cols-[minmax(0,1fr)_7rem_2.25rem] gap-1.5">
+												<input
+													type="text"
+													bind:value={substitute.name}
+													placeholder={m.recipes_edit_substitute_name()}
+													aria-label={m.recipes_edit_substitute_name()}
+													class="input input-bordered input-sm min-w-0 w-full"
+												/>
+												<select
+													bind:value={substitute.kind}
+													aria-label={m.recipes_edit_substitute_kind()}
+													class="select select-bordered select-sm min-w-0 w-full"
+												>
+													<option value="protein">{m.recipes_substitutes_kind_protein()}</option>
+													<option value="spice">{m.recipes_substitutes_kind_spice()}</option>
+													<option value="vegetable">{m.recipes_substitutes_kind_vegetable()}</option>
+													<option value="other">{m.recipes_substitutes_kind_other()}</option>
+												</select>
 												<button
 													type="button"
-													class="btn btn-ghost h-9 min-h-9 w-9 self-end p-0 text-error"
+													class="btn btn-ghost h-9 min-h-9 w-9 p-0 text-error"
 													aria-label={m.recipes_edit_substitute_remove_aria({ name: substitute.name || m.recipes_edit_substitute_name() })}
 													onclick={() => removeSubstitute(i, substituteIndex)}><Icon name="x" class="h-3.5 w-3.5" /></button
 												>
 											</div>
-											<label class="mt-2 flex min-w-0 flex-col gap-1">
-												<span class="ui-field-label">{m.recipes_edit_substitute_note()}</span>
-												<input type="text" bind:value={substitute.note} class="input input-bordered input-sm min-w-0 w-full" />
-											</label>
+											<input
+												type="text"
+												bind:value={substitute.note}
+												placeholder={m.recipes_edit_substitute_note()}
+												aria-label={m.recipes_edit_substitute_note()}
+												class="input input-bordered input-sm mt-1.5 min-w-0 w-full"
+											/>
 										</div>
 									{/each}
 								</div>
@@ -394,26 +420,29 @@
 							class="textarea textarea-bordered textarea-sm flex-1 min-w-0 leading-snug"
 							placeholder={m.recipes_edit_direction_placeholder()}
 						></textarea>
+						<!-- Secondary controls: 32 px squares (above the 24 px WCAG
+						     floor) so the row height tracks the textarea, not the
+						     button stack. -->
 						<div class="flex flex-col gap-0.5 shrink-0">
 							<button
 								type="button"
-								class="btn btn-xs btn-ghost min-h-9 min-w-9"
+								class="btn btn-xs btn-ghost h-8 min-h-8 w-8 p-0"
 								aria-label={m.recipes_edit_move_up_aria()}
 								disabled={i === 0}
 								onclick={() => moveDirection(i, -1)}>▴</button
 							>
 							<button
 								type="button"
-								class="btn btn-xs btn-ghost min-h-9 min-w-9"
+								class="btn btn-xs btn-ghost h-8 min-h-8 w-8 p-0"
 								aria-label={m.recipes_edit_move_down_aria()}
 								disabled={i === directions.length - 1}
 								onclick={() => moveDirection(i, 1)}>▾</button
 							>
 							<button
 								type="button"
-								class="btn btn-xs btn-ghost min-h-9 min-w-9 text-error"
+								class="btn btn-xs btn-ghost h-8 min-h-8 w-8 p-0 text-error"
 								aria-label={m.recipes_edit_remove_direction_aria()}
-					onclick={() => removeDirection(i)}><Icon name="x" class="h-3.5 w-3.5" /></button
+								onclick={() => removeDirection(i)}><Icon name="x" class="h-3.5 w-3.5" /></button
 							>
 						</div>
 					</div>

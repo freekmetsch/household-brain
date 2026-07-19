@@ -67,7 +67,7 @@ export class ChatAgentController {
 	private hydrationPromise: Promise<void> | null = null;
 	private abortController: AbortController | null = null;
 	private attachmentId = 0;
-	private readonly publishers = new Map<symbol, ScreenContextV1>();
+	private readonly publishers = new Map<symbol, { snapshot: ScreenContextV1; fallback: boolean }>();
 	private returnFocus: HTMLElement | null = null;
 	private invalidateTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -131,15 +131,25 @@ export class ChatAgentController {
 		this.returnFocus = null;
 	}
 
-	publishScreen(snapshot: ScreenContextV1): () => void {
+	// A page-level publisher (entity-specific) always beats the layout's
+	// route-derived fallback, regardless of effect ordering: on navigation the
+	// layout effect can re-publish AFTER the new page's effect, and
+	// last-registered-wins would leave the chat holding the generic section
+	// context instead of the open recipe/item.
+	publishScreen(snapshot: ScreenContextV1, options?: { fallback?: boolean }): () => void {
 		const id = Symbol(snapshot.routeId);
-		this.publishers.set(id, snapshot);
-		this.screenContext = snapshot;
+		this.publishers.set(id, { snapshot, fallback: options?.fallback === true });
+		this.recomputeScreenContext();
 		this.contextEnabled = true;
 		return () => {
 			this.publishers.delete(id);
-			this.screenContext = [...this.publishers.values()].at(-1);
+			this.recomputeScreenContext();
 		};
+	}
+
+	private recomputeScreenContext(): void {
+		const entries = [...this.publishers.values()];
+		this.screenContext = (entries.filter((e) => !e.fallback).at(-1) ?? entries.at(-1))?.snapshot;
 	}
 
 	removeContext(): void {

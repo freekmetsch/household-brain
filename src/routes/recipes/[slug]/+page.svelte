@@ -5,6 +5,7 @@
 	import BenchSheet, { type BenchSheetController } from '$lib/components/BenchSheet.svelte';
 	import FreezePortionsModal from '$lib/components/FreezePortionsModal.svelte';
 	import RecipeHeader from '$lib/components/recipe-detail/RecipeHeader.svelte';
+	import RecipeHero from '$lib/components/recipe-detail/RecipeHero.svelte';
 	import ImportReviewBanner from '$lib/components/recipe-detail/ImportReviewBanner.svelte';
 	import RecipeMetaChips from '$lib/components/recipe-detail/RecipeMetaChips.svelte';
 	import MealComposition from '$lib/components/recipe-detail/MealComposition.svelte';
@@ -28,10 +29,7 @@
 			recipeLang: 'en' | 'nl';
 			ingredientStock: boolean[];
 			frozenPortions: number;
-			serveFresh: Array<{ name: string; amount: string | null; unit: string | null }>;
-			hasRoles: boolean;
 			roleCoverage: IngredientRoleCoverage;
-			currentWeekStart: string;
 			subRecipes: Array<{ id: number; slug: string; title: string; titleEn: string | null; sortOrder: number }>;
 			partOfMeals: Array<{ id: number; slug: string; title: string; titleEn: string | null }>;
 		};
@@ -111,7 +109,6 @@
 		directions: displayDirections,
 		ingredients: displayIngredients,
 		ingredientStock: data.ingredientStock,
-		notes: displayNotes,
 		viewLang,
 		servings: recipe.servings
 	});
@@ -285,13 +282,14 @@
 	{viewLang}
 	{translationLoading}
 	{translationMessage}
-	{imageUploading}
-	{imageUploadError}
 	onAddToPlan={() => {
 		addToPlanOpen = true;
 	}}
 	onToggleLanguage={() => setViewLanguage(viewLang === 'en' ? 'nl' : 'en')}
 	onEditRaw={openEditRaw}
+	rolesMenuLabel={data.roleCoverage.complete
+		? `${m.recipes_roles_heading()} · ${data.roleCoverage.classified}/${data.roleCoverage.total}`
+		: null}
 	hasCookProgress={benchSheetController.hasProgress}
 	onResetCookProgress={resetCookProgress}
 	onRegenerateCookMode={() => benchSheetController.regenerate()}
@@ -300,6 +298,14 @@
 	onPickPhoto={() => imageFileInput?.click()}
 	onRemovePhoto={() => void deleteImage()}
 	onRetryTranslation={(force) => void requestTranslation(force)}
+/>
+
+<RecipeHero
+	imageUrl={recipe.imageUrl}
+	title={displayTitle}
+	uploading={imageUploading}
+	uploadError={imageUploadError}
+	onPickPhoto={() => imageFileInput?.click()}
 />
 
 {#if recipe.needsReview}
@@ -313,7 +319,7 @@
 	/>
 {/if}
 
-<RecipeMetaChips {recipe} {displayCategory} {displayCuisine} {displayNotes} />
+<RecipeMetaChips {recipe} {displayCategory} {displayCuisine} />
 
 <MealComposition
 	slug={recipe.slug}
@@ -322,7 +328,12 @@
 	{subDisplayTitle}
 />
 
-<RoleCoverage slug={recipe.slug} coverage={data.roleCoverage} onAskAi={openRolesAiEdit} />
+{#if !data.roleCoverage.complete}
+	<!-- Incomplete roles stay a visible page-level nudge; once complete the
+	     panel collapses into a quiet header-menu entry instead of occupying
+	     the cooking surface. -->
+	<RoleCoverage slug={recipe.slug} coverage={data.roleCoverage} onAskAi={openRolesAiEdit} />
+{/if}
 
 <SubstituteSuggestions ingredients={displayIngredients} />
 
@@ -335,15 +346,9 @@
 	onchange={onImagePicked}
 />
 
-<!-- Serve-week tabs are a segmented control — keep it to the two nearest
-     weeks; the full planning window lives in the Add-to-plan sheet below. -->
 <FreezerStockPanel
 	{recipe}
-	weeks={weeks.slice(0, 2)}
-	currentWeekStart={data.currentWeekStart}
 	frozenPortions={data.frozenPortions}
-	hasRoles={data.hasRoles}
-	serveFresh={data.serveFresh}
 	onSaved={(payload) => {
 		recipe = {
 			...recipe,
@@ -364,6 +369,28 @@
 	}}
 	bind:controller={benchSheetController}
 />
+
+{#if displayNotes || recipe.tags.length}
+	<!-- Notes and tags live once, at the bottom — reference material, not
+	     orientation. The pb clears the fixed cook bar. -->
+	<section class="px-3 pt-1 pb-32 flex flex-col gap-2">
+		{#if displayNotes}
+			<h2 class="text-[10px] uppercase tracking-wide font-bold text-base-content/50">
+				{m.recipes_notes_heading()}
+			</h2>
+			<p class="rounded-xl bg-base-200/50 px-3 py-2 text-sm leading-snug text-base-content/75">
+				{displayNotes}
+			</p>
+		{/if}
+		{#if recipe.tags.length}
+			<div class="flex flex-wrap gap-1.5">
+				{#each recipe.tags as tag}
+					<span class="ui-chip-muted">{tag}</span>
+				{/each}
+			</div>
+		{/if}
+	</section>
+{/if}
 
 <AddToPlanSheet
 	bind:open={addToPlanOpen}

@@ -22,6 +22,7 @@
 	import ComponentCard from './cook-mode/ComponentCard.svelte';
 	import MergeCard from './cook-mode/MergeCard.svelte';
 	import TimerStack from './cook-mode/TimerStack.svelte';
+	import SegmentedTabs from './ui/SegmentedTabs.svelte';
 	import FixedBottomBar from './ui/FixedBottomBar.svelte';
 	import { fmtClock, paletteFor, streamPalette, type BeatPalette } from './cook-mode/palette';
 	import { isStaleCookMode } from './cook-mode/staleness';
@@ -46,7 +47,6 @@
 		directions: string[];
 		ingredients: { name: string; amount: string; unit?: string }[];
 		ingredientStock: boolean[];
-		notes: string | null;
 		viewLang: 'en' | 'nl';
 		servings: number | null;
 	};
@@ -72,6 +72,14 @@
 	let cookMode = $state<CookModeRecipe | null>(untrack(() => initial));
 	let loading = $state(false);
 	let loadError = $state('');
+	// Connection drops and transient server errors are retryable: the server
+	// finishes and caches the generation even when the phone kills the fetch
+	// (backgrounding, navigation), and a re-POST either joins the in-flight
+	// generation or returns the cached sheet instantly. Budget/no-directions
+	// failures are terminal until the user acts.
+	let loadErrorRetryable = false;
+	let autoRetries = 0;
+	let retryTimer: ReturnType<typeof setTimeout> | null = null;
 	let regenerating = $state(false);
 	let cookedSubmitting = $state(false);
 	let cookedDone = $state(false);
@@ -108,6 +116,11 @@
 	let checked = $state<Record<number, boolean>>({});
 	let mep = $state<Record<number, boolean>>({});
 	let mepExpanded = $state(false);
+
+	// Cooking view ↔ original recipe. Both stay mounted while a sheet exists —
+	// the original view owns its own naive timers, and unmounting it on toggle
+	// would silently kill them mid-cook. Hidden, not destroyed.
+	let view = $state<'cook' | 'original'>('cook');
 
 	// Canonical timer state. `timerEnds` holds wall-clock fire times keyed by
 	// step idx; `timerOrder` holds insertion order so the multi-pill stack can
@@ -272,6 +285,13 @@
 	function onVisibilityChange() {
 		if (typeof document === 'undefined') return;
 		if (document.visibilityState !== 'visible') return;
+		// Coming back to a failed generation: rejoin it. The server-side
+		// in-flight dedup makes this free when the original call is still
+		// running, and instant when it already finished and cached.
+		if (!cookMode && !loading && loadError && loadErrorRetryable) {
+			autoRetries = 0;
+			void loadCookMode(false);
+		}
 		if (!wakeLock) void acquireWakeLock();
 		// AudioContext goes into `suspended` state when phone backgrounds.
 		// Resume on return so the next alarm fires audibly.
@@ -416,8 +436,13 @@
 	});
 
 	async function loadCookMode(force = false) {
+		if (retryTimer) {
+			clearTimeout(retryTimer);
+			retryTimer = null;
+		}
 		loading = true;
 		loadError = '';
+		loadErrorRetryable = false;
 		if (genStartedAt == null) {
 			genStartedAt = Date.now();
 			genElapsedSec = 0;
@@ -434,6 +459,7 @@
 					regenerating = true;
 					return loadCookMode(true);
 				}
+				autoRetries = 0;
 				if (rawTimerActive) {
 					pendingCookMode = body.cookMode;
 				} else {
@@ -445,13 +471,25 @@
 				loadError = m.benchsheet_error_no_directions();
 			} else {
 				loadError = body.message ?? m.benchsheet_error_load_failed();
+				loadErrorRetryable = true;
 			}
 		} catch {
 			loadError = m.benchsheet_error_connection_failed();
+			loadErrorRetryable = true;
 		}
 		loading = false;
 		regenerating = false;
 		genStartedAt = null;
+		// One bounded background retry ladder for retryable failures (the tab
+		// never left, so onVisibilityChange won't fire). A rejoin is cheap —
+		// it never double-spends thanks to the server's in-flight dedup.
+		if (loadErrorRetryable && autoRetries < 2) {
+			autoRetries += 1;
+			retryTimer = setTimeout(() => {
+				retryTimer = null;
+				if (!cookMode && !loading && loadError && loadErrorRetryable) void loadCookMode(false);
+			}, autoRetries * 5000);
+		}
 	}
 
 	function regenerate() {
@@ -571,6 +609,7 @@
 	let cookedAckTimeout: ReturnType<typeof setTimeout> | null = null;
 	onDestroy(() => {
 		if (cookedAckTimeout) clearTimeout(cookedAckTimeout);
+		if (retryTimer) clearTimeout(retryTimer);
 		terminateWorker();
 		releaseWakeLock();
 		// AudioContext.close() rejects if already closed; guard rather than
@@ -760,7 +799,6 @@
 		directions={fallback.directions}
 		ingredients={fallback.ingredients}
 		ingredientStock={fallback.ingredientStock}
-		notes={fallback.notes}
 		viewLang={fallback.viewLang}
 		servings={fallback.servings}
 		bind:activeTimer={rawTimerActive}
@@ -779,7 +817,6 @@
 		directions={fallback.directions}
 		ingredients={fallback.ingredients}
 		ingredientStock={fallback.ingredientStock}
-		notes={fallback.notes}
 		viewLang={fallback.viewLang}
 		servings={fallback.servings}
 		bannerMessage={m.benchsheet_paused_banner({ reason: aiPausedReason })}
@@ -791,6 +828,32 @@
 		<button class="btn btn-sm btn-primary" onclick={() => loadCookMode(false)}>{m.benchsheet_try_again_button()}</button>
 	</div>
 {:else if cookMode}
+	{#if fallback.directions.length > 0}
+		<!-- The obvious escape hatch: cooking view ↔ the untouched original.
+		     Both stay mounted (hidden, not unmounted) so timers in either view
+		     survive toggling. -->
+		<div class="px-3 pt-3">
+			<SegmentedTabs
+				cols={2}
+				tabs={[
+					{ value: 'cook', label: m.benchsheet_view_cooking() },
+					{ value: 'original', label: m.benchsheet_view_original() }
+				]}
+				bind:value={view}
+			/>
+		</div>
+		<div class={view === 'original' ? '' : 'hidden'}>
+			<RawDirectionsFallback
+				directions={fallback.directions}
+				ingredients={fallback.ingredients}
+				ingredientStock={fallback.ingredientStock}
+				viewLang={fallback.viewLang}
+				servings={fallback.servings}
+				bind:activeTimer={rawTimerActive}
+			/>
+		</div>
+	{/if}
+	<div class={view === 'cook' || fallback.directions.length === 0 ? '' : 'hidden'}>
 	{#if notificationPrimerVisible}
 		<div
 			class="px-3 py-2 border-b border-warning/30 bg-warning/10 text-base-content text-[12px] flex items-start gap-2"
@@ -904,11 +967,15 @@
 		{/each}
 	</ul>
 
-	<!-- Pass the second-quantized time so pills only re-render on second
-	     changes (4× fewer re-renders than the raw 250 ms `now`). -->
+	</div>
+
+	<!-- Outside the view wrapper: running cook-mode timers stay glanceable
+	     even while reading the original recipe. Pass the second-quantized time
+	     so pills only re-render on second changes (4× fewer re-renders than
+	     the raw 250 ms `now`). -->
 	<TimerStack ids={timerOrder} {timerEnds} {steps} now={nowSec * 1000} onDismiss={cancelTimer} />
 
-	{#if allDone}
+	{#if allDone && (view === 'cook' || fallback.directions.length === 0)}
 		<FixedBottomBar contentClass="mx-auto flex max-w-2xl flex-col gap-2 px-3 py-2">
 			{#if !cookedDone && !ratingDismissed}
 				<div class="flex items-center gap-2">

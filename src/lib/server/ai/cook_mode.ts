@@ -9,7 +9,7 @@ import {
 	logSpend,
 	parseModelJson
 } from '$lib/server/ai/client';
-import { getChatModel } from '$lib/server/ai/config';
+import { getChatModel, getChatFallbackModel } from '$lib/server/ai/config';
 import { db } from '$lib/server/db/index';
 import { recipes, type Ingredient } from '$lib/server/db/schema';
 import type { CookModeRecipe } from '$lib/types';
@@ -31,7 +31,8 @@ const GOOD_GOAL_FIXTURES: string[] = [
 	'Fold mixture — just combined',
 	'Roast chicken — 74°C in thigh',
 	'Bake top — set with crackle',
-	'Sweat shallots — translucent'
+	'Sweat shallots — translucent',
+	'Chop aromatics — even fine dice'
 ];
 const BAD_GOAL_FIXTURES: string[] = [
 	'Stir occasionally', // no em-dash, no state
@@ -267,14 +268,18 @@ async function generateCookModeUncached(slug: string, opts: { force?: boolean } 
 	const payloadJson = JSON.stringify(payload);
 	const CookModeSchema = buildCookModeSchema(subRows.length > 0 ? 30 : 20);
 
+	// Attempts 1–2 run on the chat model (second gets the validation errors fed
+	// back); attempt 3 escalates to the fallback model — the strict schema
+	// (goal grammar, timer contract, merge ordering) is where cheap models
+	// repeatedly fail, and a dead bench sheet costs more than one bigger call.
 	let cookMode: CookModeRecipe | null = null;
 	let lastError: string | null = null;
-	for (let attempt = 0; attempt < 2 && cookMode == null; attempt++) {
+	for (let attempt = 0; attempt < 3 && cookMode == null; attempt++) {
 		const userContent = lastError
 			? `${payloadJson}\n\nYour previous response failed schema validation:\n${lastError}\n\nReturn ONLY corrected JSON conforming to the schema.`
 			: payloadJson;
 		const msg = await createMessage({
-			model: getChatModel().value,
+			model: attempt < 2 ? getChatModel().value : getChatFallbackModel().value,
 			system: prompt,
 			messages: [{ role: 'user', content: userContent }]
 		});
@@ -294,7 +299,7 @@ async function generateCookModeUncached(slug: string, opts: { force?: boolean } 
 		}
 	}
 	if (cookMode == null) {
-		throw new Error(`cook_mode JSON failed validation after retry: ${lastError}`);
+		throw new Error(`cook_mode JSON failed validation after 3 attempts: ${lastError}`);
 	}
 
 	const updated = db

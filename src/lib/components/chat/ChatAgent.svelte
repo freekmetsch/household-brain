@@ -52,6 +52,10 @@
 	let dragOptions = $derived<DragOptions>({
 		bounds: 'body',
 		ignoreMultitouch: true,
+		// Neodrag's default 3 px threshold turns most thumb taps into drags on
+		// mobile (a tap wobbles more than 3 px), which swallowed the click that
+		// opens the agent. 12 px keeps taps as taps; a deliberate drag clears it.
+		threshold: { distance: 12 },
 		position,
 		onDragStart: () => (dragging = true),
 		onDrag: (data) => (position = { x: data.offsetX, y: data.offsetY }),

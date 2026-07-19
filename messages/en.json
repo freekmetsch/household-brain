@@ -12,14 +12,12 @@
 	"login_username_label": "Username",
 	"login_password_label": "Password",
 	"login_signin_button": "Sign in",
-
 	"home_expiry_days_expired": "{days}d expired",
 	"home_expiry_today": "Today",
 	"home_expiry_tomorrow": "Tomorrow",
 	"home_expiry_days_left": "{days}d",
 	"home_expiring_soon_label": "Expiring soon:",
 	"home_dismiss_aria": "Dismiss",
-
 	"mealplan_toast_could_not_add": "Could not add the meal.",
 	"mealplan_toast_could_not_update": "Could not update the meal.",
 	"mealplan_toast_could_not_restore": "Could not restore the meal.",
@@ -74,7 +72,6 @@
 	"mealplan_consume_desc_suffix": "came out of the freezer? ({count} stocked)",
 	"mealplan_consume_button": "Take {count} out",
 	"mealplan_consume_toast_failed": "Could not update the freezer stock.",
-
 	"recipes_toast_could_not_create_meal": "Could not create the meal",
 	"recipes_toast_connection_error": "Connection error",
 	"recipes_toast_scraping_failed": "Scraping failed",
@@ -127,7 +124,6 @@
 	"recipes_import_sheet_title": "Import recipe from URL",
 	"recipes_url_aria": "Recipe URL",
 	"recipes_fetching_label": "Fetching recipe…",
-
 	"recipes_toast_image_too_large": "Image larger than 5MB",
 	"recipes_toast_upload_failed": "Upload failed ({status})",
 	"recipes_toast_connection_failed": "Connection failed",
@@ -140,7 +136,6 @@
 	"recipes_confirm_reset_cook_progress": "Start this recipe over and clear its timers?",
 	"recipes_ai_roles_prefill": "Classify the ingredients for {title} as cook-in or serve-fresh",
 	"recipes_title_suffix": "Recipes",
-
 	"recipes_header_back_aria": "Back to recipes",
 	"recipes_header_replace_photo": "Replace photo",
 	"recipes_header_add_photo": "Add photo",
@@ -152,13 +147,10 @@
 	"recipes_header_regenerate_cook_mode": "Rebuild cooking view",
 	"recipes_header_reset_cook_progress": "Start cooking over",
 	"recipes_header_retranslate": "Re-translate to EN",
-	"recipes_header_ai_edit": "AI edit",
 	"recipes_header_remove_photo": "Remove photo",
 	"recipes_header_open_source": "Open source",
 	"recipes_header_translating": "Translating recipe…",
-
 	"recipes_meta_servings": "{count} servings",
-
 	"recipes_meal_combines_label": "Meal recipe · combines",
 	"recipes_meal_remove_aria": "Remove {title} from this meal",
 	"recipes_meal_removed_toast": "Removed {title}",
@@ -170,7 +162,6 @@
 	"recipes_meal_add_sheet_title": "Add a recipe to this meal",
 	"recipes_meal_search_placeholder": "Search recipes…",
 	"recipes_meal_no_matching": "No matching recipes.",
-
 	"recipes_addplan_sheet_title": "Add to meal plan",
 	"recipes_addplan_week_label": "Week {number}",
 	"recipes_addplan_add_button": "Add",
@@ -180,29 +171,16 @@
 	"recipes_addplan_source_label": "How will you make it?",
 	"recipes_addplan_source_freezer": "Serve from the freezer ({count} stocked)",
 	"recipes_addplan_source_fresh": "Cook it fresh",
-
 	"recipes_aiedit_placeholder": "e.g. make it vegan, halve the amounts…",
 	"recipes_aiedit_close_aria": "Close AI edit",
-
 	"recipes_freezer_week_of": "Week of {date}",
 	"recipes_freezer_toast_save_failed": "Save failed ({status})",
-	"recipes_freezer_toast_generic_failed": "Failed ({status})",
 	"recipes_freezer_portions_of_target": "{frozen} / {target} portions",
 	"recipes_freezer_below_target_suffix": " — below target",
 	"recipes_freezer_portion_singular_in_freezer": "{count} portion in freezer",
 	"recipes_freezer_portions_plural_in_freezer": "{count} portions in freezer",
 	"recipes_freezer_keep_stocked_label": "Keep stocked",
 	"recipes_freezer_target_portions_label": "Target portions",
-	"recipes_freezer_serve_button": "Serve from freezer",
-	"recipes_freezer_needs_roles_prefix": "Serving from the freezer needs ingredient roles —",
-	"recipes_freezer_set_roles_link": "set them with AI",
-	"recipes_freezer_fresh_needed_label": "Fresh items still needed:",
-	"recipes_freezer_added_to_shopping": "Added to {week}'s shopping list",
-	"recipes_freezer_open_shopping_link": "Open shopping list",
-	"recipes_freezer_add_to_week_label": "Add to week",
-	"recipes_freezer_add_to_shopping_button": "Add {count} to shopping list",
-	"recipes_freezer_nothing_fresh": "Nothing fresh to buy — all serve-fresh items are in stock ✓",
-
 	"recipes_import_banner_title": "Imported — worth a quick check",
 	"recipes_import_reason_default": "Some fields may be incomplete.",
 	"recipes_import_reason_title": "The title may need a check.",
@@ -214,7 +192,6 @@
 	"recipes_import_toast_dismiss_failed": "Couldn't dismiss ({status})",
 	"recipes_import_toast_connection_failed": "Connection failed — tap to retry",
 	"recipes_import_toast_clear_failed": "Could not clear the review flag.",
-
 	"recipes_edit_confirm_discard": "Discard your unsaved recipe edits?",
 	"recipes_edit_toast_save_failed": "Could not save recipe.",
 	"recipes_edit_title_label": "Title",
@@ -239,7 +216,6 @@
 	"recipes_edit_notes_placeholder": "Optional notes — substitutions, tips…",
 	"recipes_edit_save_button": "Save",
 	"recipes_edit_saved_button": "Saved",
-
 	"recipes_freeze_heading": "Freeze leftovers?",
 	"recipes_freeze_desc_prefix": "Add frozen portions of",
 	"recipes_freeze_desc_suffix": "to the freezer, linked to this recipe.",
@@ -252,13 +228,12 @@
 	"recipes_freeze_toast_connection_failed": "Connection failed.",
 	"recipes_freeze_skip_button": "Skip",
 	"recipes_freeze_button": "Freeze {count}",
-
 	"recipes_fallback_retry_button": "retry",
 	"recipes_fallback_servings_label": "Servings",
+	"recipes_notes_heading": "Notes",
 	"recipes_fallback_in_stock_title": "In stock",
 	"recipes_fallback_in_stock_badge": "in stock",
 	"recipes_fallback_timer_done": "Done!",
-
 	"settingsshell_panel_display": "Display",
 	"settingsshell_panel_ai": "AI",
 	"settingsshell_panel_recipes": "Recipes",
@@ -296,9 +271,7 @@
 	"settingsshell_toast_cap_saved": "Saved {label} cap",
 	"settingsshell_per_day_suffix": "/day",
 	"settingsshell_reset_button": "Reset",
-
 	"ui_bottomsheet_close": "Close",
-
 	"inventory_title": "Stock · Household Brain",
 	"inventory_heading": "Stock",
 	"inventory_activity_aria": "Recent activity",
@@ -334,14 +307,11 @@
 	"inventory_empty_add_first_button": "Add the first item",
 	"inventory_empty_filtered_title": "Nothing matches these filters.",
 	"inventory_clear_filters_button": "Clear filters",
-
 	"inventory_section_freezer": "Freezer",
 	"inventory_section_pantry": "Pantry",
-
 	"inventory_activity_title": "Recent activity",
 	"inventory_activity_loading": "Loading…",
 	"inventory_activity_empty": "No activity yet.",
-
 	"inventory_addform_name_label": "Name",
 	"inventory_addform_name_placeholder": "e.g. Spinazie",
 	"inventory_addform_kind_label": "Kind",
@@ -359,10 +329,8 @@
 	"inventory_addform_saving": "Saving…",
 	"inventory_addform_submit_button": "Add to stock",
 	"inventory_toast_add_item_failed": "Could not add item",
-
 	"inventory_facet_all": "All",
 	"inventory_facet_review_count": "{count} review",
-
 	"inventory_review_reason_undo_conflict": "Changed since that action — undo skipped",
 	"inventory_review_reason_unclassified": "Needs a food class",
 	"inventory_review_reason_unknown_kind": "Kind needs checking",
@@ -393,13 +361,11 @@
 	"inventory_set_portions_button": "Set portions",
 	"inventory_fix_button": "Fix",
 	"inventory_resolve_button": "Resolve",
-
 	"inventory_ghost_cook_again_button": "Cook again",
 	"inventory_ghost_portions_with_target": "0 / {target} portions",
 	"inventory_ghost_portions_no_target": "0 portions",
 	"inventory_ghost_stop_button": "Stop keeping stocked",
 	"inventory_toast_ghost_opt_out": "{title} is no longer kept stocked",
-
 	"inventory_editor_name_label": "Name",
 	"inventory_editor_qty_label": "Quantity",
 	"inventory_editor_unit_label": "Unit",
@@ -419,27 +385,22 @@
 	"inventory_editor_used_in_singular": "Used in {count} recipe",
 	"inventory_editor_used_in_plural": "Used in {count} recipes",
 	"inventory_editor_history_label": "History",
-
 	"inventory_row_edit_aria": "Edit {name}",
 	"inventory_row_needs_review_title": "Needs review",
-
 	"inventory_link_sheet_title": "Link a recipe to {name}",
 	"inventory_link_sheet_title_default": "Link a recipe",
 	"inventory_link_search_placeholder": "Search recipes…",
 	"inventory_link_no_match": "No recipes match \"{query}\".",
-
 	"inventory_qty_aria": "Quantity for {name}",
 	"inventory_qty_save_aria": "Save quantity",
 	"inventory_qty_set_placeholder": "set qty",
 	"inventory_qty_edit_aria": "Edit quantity for {name}",
 	"inventory_qty_decrease_aria": "Decrease {name}",
 	"inventory_qty_increase_aria": "Increase {name}",
-
 	"inventory_staples_label": "Staples",
 	"inventory_staples_on_list": "✓ on list",
 	"inventory_staples_add_aria": "Add {name} to this week's shopping list",
 	"inventory_staples_add_button": "+ list",
-
 	"shopping_title": "Shopping · Household Brain",
 	"shopping_heading": "Shopping",
 	"shopping_review_ah_order": "Review AH order",
@@ -542,7 +503,6 @@
 	"shopping_week_of_label": "Week of",
 	"shopping_back_to_week_button": "Back to this week",
 	"shopping_next_week_aria": "Next week",
-
 	"settings_account_title": "Account - Settings",
 	"settings_account_password_mismatch": "Passwords do not match",
 	"settings_account_change_password_failed": "Could not change password",
@@ -555,7 +515,6 @@
 	"settings_account_saving_label": "Saving...",
 	"settings_account_update_password_button": "Update password",
 	"settings_account_logout_button": "Log out",
-
 	"settings_advanced_title": "Advanced - Settings",
 	"settings_model_heading": "Model",
 	"settings_advanced_vision_label": "Vision model",
@@ -574,7 +533,6 @@
 	"settings_advanced_pricing_heading": "Per-model pricing overrides",
 	"settings_advanced_pricing_desc_a": "vars per model (e.g.",
 	"settings_advanced_pricing_desc_b": ") — fallback USD/M-token rates used only when a provider doesn't report its own cost. Rarely needed; see",
-
 	"settings_ai_title": "AI - Settings",
 	"settings_ai_usage_caps_heading": "Usage & caps",
 	"settings_ai_spend_tooltip": "EUR {amount}",
@@ -601,7 +559,6 @@
 	"settings_ai_chat_model_label": "Chat model",
 	"settings_ai_fallback_model_label": "Fallback model",
 	"settings_ai_fallback_model_hint": "Used when the chat model errors mid-turn.",
-
 	"settings_connections_title": "Connections - Settings",
 	"settings_connections_ah_heading": "Albert Heijn",
 	"settings_connections_status_connected": "connected",
@@ -630,7 +587,6 @@
 	"settings_connections_connect_failed": "Could not connect to Albert Heijn.",
 	"settings_connections_connected_toast": "Connected to AH",
 	"settings_connections_connected_as_toast": "Connected to AH as {name}",
-
 	"settings_data_title": "Data - Settings",
 	"settings_data_export_heading": "Export",
 	"settings_data_export_button": "Export as JSON",
@@ -651,7 +607,6 @@
 	"settings_data_reset_confirm_body_plural": "This permanently deletes {count} rows from {label}. Type {label} to confirm.",
 	"settings_data_cancel_button": "Cancel",
 	"settings_data_delete_button": "Delete",
-
 	"settings_recipes_title": "Recipes - Settings",
 	"settings_recipes_language_label": "Recipe language",
 	"settings_recipes_default_sort_label": "Default sort",
@@ -667,7 +622,6 @@
 	"settings_recipes_cookmode_pregen_hint": "Build the step-by-step Cook Mode sheet right after import instead of on first open.",
 	"settings_recipes_saved_autotranslate": "Saved auto-translate",
 	"settings_recipes_saved_cookmode_pregen": "Saved cook-mode pre-generation",
-
 	"benchsheet_ready_title": "Updated cooking view is ready.",
 	"benchsheet_ready_desc": "Your current view stays open so running timers aren't lost.",
 	"benchsheet_switch_button": "Use update",
@@ -684,6 +638,8 @@
 	"benchsheet_notif_primer_desc": "Allow notifications so timers ring even if you swipe away briefly. Sound and vibration always work in the cook view.",
 	"benchsheet_notif_allow_button": "Allow",
 	"benchsheet_notif_not_now_button": "Not now",
+	"benchsheet_view_cooking": "Cooking view",
+	"benchsheet_view_original": "Original recipe",
 	"benchsheet_mise_label": "Mise",
 	"benchsheet_mise_collapse": "Tap to collapse",
 	"benchsheet_mise_progress": "{done}/{total} ready · {preview}",
@@ -694,7 +650,6 @@
 	"benchsheet_cook_button": "I cooked it",
 	"benchsheet_cooked_logged": "✓ Logged",
 	"benchsheet_cook_failed": "Could not log this cook. Try again.",
-
 	"cookmode_merge_from_prefix": "From ",
 	"cookmode_timer_expand_aria": "Expand timer",
 	"cookmode_timer_minimize_aria": "Minimize timer",
@@ -706,7 +661,6 @@
 	"cookmode_timerchip_done_label": "done",
 	"cookmode_timerstack_more_aria": "{count} more timers",
 	"cookmode_timerstack_more_label": "+{count} more",
-
 	"chat_attach_max_photos": "Up to {max} photos at a time.",
 	"chat_attach_invalid_type": "Photos only (JPG, PNG, WEBP, GIF).",
 	"chat_attach_too_large": "That photo is too large.",
@@ -787,7 +741,6 @@
 	"recipes_edit_substitute_kind": "Type",
 	"recipes_edit_substitute_note": "When or how to use it (optional)",
 	"recipes_edit_substitute_remove_aria": "Remove substitute {name}",
-
 	"mealplan_settings_aria": "Meal planning settings",
 	"mealplan_delivery_label": "Delivery {date}",
 	"mealplan_day_picker_aria": "Day for {dinner}",

@@ -11,7 +11,7 @@ Your output is a single JSON object that conforms exactly to the schema below �
   "version": 2,
   "language": "en",
   "mise_en_place": [
-    "string — one prep / measurement / equipment line. Pull all chopping, measuring, preheating, and gathering OUT of the steps. Empty array allowed only for genuinely zero-prep recipes."
+    "string — one measurement / equipment / gathering line. Measuring, draining cans, preheating, tin-lining, and gathering go here. Knife work and hands-on prep do NOT — they are real steps (rule 5). Empty array allowed only for genuinely zero-prep recipes."
   ],
   "streams": [
     {
@@ -40,11 +40,15 @@ Your output is a single JSON object that conforms exactly to the schema below �
 
 1. **Bench-sheet framing.** Steps inside a stream are *operations on that component*, not numbered instructions. Avoid "first… then… finally" framing. The cook can read any sub-action and know what to do without re-reading the previous one. The recipe is a graph of components joined at plating, not a numbered ladder.
 2. **Goal field is the headline.** Every step has a `goal` ≤ 8 words. Form: `[Verb-led action] — [target state]`. The verb leads (≥ 2 words before the em-dash: verb + object/subject). The cook glances at this and immediately knows *what they're doing* and *what they're aiming for*.
-   - GOOD: `Rub butter into flour — sandy`, `Reduce sauce — coats spoon`, `Brown crust — deep gold`, `Whisk batter — pale ribbon`, `Fold mixture — just combined`, `Roast chicken — 74°C in thigh`, `Bake top — set with crackle`, `Sweat shallots — translucent`.
+   - GOOD: `Rub butter into flour — sandy`, `Reduce sauce — coats spoon`, `Brown crust — deep gold`, `Whisk batter — pale ribbon`, `Fold mixture — just combined`, `Roast chicken — 74°C in thigh`, `Bake top — set with crackle`, `Sweat shallots — translucent`, `Chop aromatics — even fine dice`.
    - BAD: `Dough — sandy` (no verb — old noun-state form), `Stir occasionally` (no em-dash, no target state), `dough — sandy` (lowercase start), `Onions - translucent` (hyphen-minus — must be em-dash `—`), `Bake at 180°C until skewer comes out clean — done` (> 8 words), `Mix` (no separator, no state), `Bloom the aromatics` (action with no target state — belongs in `body`).
 3. **Timer purpose mirrors the goal.** `timer_purpose` follows the same action-led form, ≤ 8 words. Often identical to `goal`. Refine only when the *active wait state* is more specific than the eventual target (step goal `Reduce sauce — thickened`; timer_purpose `Reduce sauce — coats spoon`).
 4. **Timer pill labels.** When `timer_seconds` is set, fill `timer_action` (1–2 words, lowercase gerund, e.g. `baking`, `simmering`, `resting`, `searing`) and `timer_location` (free text ≤ 16 chars; usually `oven` | `stove` | `fridge` | `counter` | `sous-vide`). These render as the dominant glanceable text on the floating timer pill: `BAKING · oven · 6:42`. Both must be non-null when `timer_seconds` is set, both null when it isn't.
-5. **Mise en place is mandatory.** All chopping, measuring, preheating, equipment gathering goes in `mise_en_place`. Steps no longer carry prep — they start at the first cook action ("Heat oil in pan", not "Chop the onion"). Empty array is allowed only for trivially zero-prep recipes.
+5. **Prep is cooking — knife work is steps, not mise.** `mise_en_place` holds only measuring, draining, preheating, and equipment/ingredient gathering. Chopping, mincing, grating, trimming, washing, marinating setup — the hands-on prep a cook actually does at the bench — are real steps with the sheet open. The cook's session STARTS at the cutting board, not at the first pan on heat.
+   - Group a component's knife work into ONE prep beat at the start of its stream (`Chop aromatics — even fine dice` covering onion + garlic + ginger), splitting only on a rule-8 seam.
+   - Trivial prep of a single ingredient with no wait (dice one shallot, trim broccoli) folds into the step that uses it — name it in that step's `body` ("Dice the shallot, then sweat…").
+   - Prep steps follow the same goal grammar and take a timer only when a real wait exists (marinating, macerating).
+   - Empty `mise_en_place` is allowed only for trivially zero-prep recipes.
 6. **One stream by default.** If the recipe is genuinely linear (one cook, one pot, sequential), emit exactly one stream whose `name` describes the dish (e.g. `Curry`). All steps share that `stream_id`.
 7. **Multistream only when truly parallel.** Declare ≥ 2 streams ONLY when the steps in those streams could realistically run in parallel — by two cooks, or by one cook during a wait. Don't fabricate parallelism for serial work; the conservative single-stream default is preferred over invented lanes.
 8. **One beat per step — split only on a real seam.** A step is one *beat* of cooking, not one motion. Split two actions into separate steps ONLY when at least one holds: (a) a real wait sits between them (a timer, a state change like macerating — not a stir); (b) the vessel/station/tool changes (board → pan, mixer → oven); (c) they run in parallel and a second cook could claim one. Otherwise collapse: same vessel, no wait, mechanically continuous motions ("measure → sift → whisk in") are ONE step. Never emit a step whose body is a single verb on a single ingredient ("Add garlic" — bad). "Add the onion and stir 5 min until translucent" is one step; "Add onion. Add garlic. Stir." is three — bad.
@@ -61,7 +65,7 @@ When the input carries `sub_recipes` (e.g. taco night = guacamole + salsa + taco
 
 - Each sub-recipe becomes its own stream (its title, shortened, is the stream name). Only split a sub-recipe into multiple streams when its own steps genuinely run in parallel (rule 7 still applies).
 - The parent's own `directions` (if any) are the assembly/plating steps — they form the final merge step whose `merges_from` lists every sub-recipe stream. If the parent has no directions, still end with one plating/serving merge step that brings the components together.
-- One unified `mise_en_place` for the whole meal — group per component ("GUAC: 2 avocados, halved…") so two cooks can split prep.
+- One unified `mise_en_place` for the whole meal — group per component ("GUAC: 2 avocados, 1 lime…") so two cooks can split the gathering; each component's knife work still opens its own stream as prep beats (rule 5).
 - Interleave streams by rule 14: schedule quick fresh components (guac, salsa) during the long component's waits (meat simmer), not all at position 0.
 - Step budget for meals is 2–30 (rule 13's cap of 20 applies to single recipes only). Stay compact — beat granularity (rule 8) matters MORE with many components, not less.
 - Each sub-recipe's ingredients keep their own source language (rule 11 applies per sub-recipe).
@@ -75,11 +79,11 @@ The aromatics stream and the spinach stream run in parallel; spinach folds into 
   "version": 2,
   "language": "en",
   "mise_en_place": [
-    "1 large yellow onion, finely chopped",
-    "4 cloves garlic, minced",
-    "1 tbsp ginger, grated",
-    "200 g spinach, washed",
-    "2 tsp ground cumin, 1 tsp turmeric, 1 tsp garam masala",
+    "1 large yellow onion",
+    "4 cloves garlic",
+    "1 tbsp fresh ginger",
+    "200 g spinach",
+    "2 tsp ground cumin, 1 tsp turmeric, 1 tsp garam masala, measured into one bowl",
     "1 × 400 g can chopped tomatoes",
     "2 × 400 g cans chickpeas, drained",
     "salt, lemon, 2 tbsp olive oil"
@@ -90,6 +94,18 @@ The aromatics stream and the spinach stream run in parallel; spinach folds into 
     { "id": "curry", "name": "Curry pot" }
   ],
   "steps": [
+    {
+      "title": "Prep aromatics",
+      "goal": "Chop aromatics — even fine dice",
+      "body": "Finely chop the onion, mince the 4 garlic cloves, grate the 1 tbsp ginger. Keep them together — they hit the pan as one.",
+      "ingredients": ["1 large yellow onion", "4 cloves garlic", "1 tbsp fresh ginger"],
+      "timer_seconds": null,
+      "timer_purpose": null,
+      "timer_action": null,
+      "timer_location": null,
+      "stream_id": "aromatics",
+      "merges_from": []
+    },
     {
       "title": "Bloom aromatics",
       "goal": "Sweat onions — translucent",
@@ -105,7 +121,7 @@ The aromatics stream and the spinach stream run in parallel; spinach folds into 
     {
       "title": "Wilt spinach",
       "goal": "Toss spinach — just wilted",
-      "body": "In a separate small pan, splash 2 tbsp water and add the 200 g spinach. Toss until just wilted, ~2 min. Drain and set aside.",
+      "body": "Rinse the 200 g spinach. In a separate small pan, splash 2 tbsp water and add it. Toss until just wilted, ~2 min. Drain and set aside.",
       "ingredients": ["200 g spinach"],
       "timer_seconds": 120,
       "timer_purpose": "Toss spinach — just wilted",
@@ -155,6 +171,7 @@ The aromatics stream and the spinach stream run in parallel; spinach folds into 
 ```
 
 Notes on this example:
+- The session opens at the cutting board: the aromatics stream starts with ONE prep beat covering all three knife jobs (rule 5). The spinach rinse is trivial single-ingredient prep, so it folds into the wilt step's body instead of claiming its own step.
 - Every `goal` is action-led, ≥ 2 words before the em-dash, ≤ 8 words total. The cook can scan the column of goals and grasp the recipe shape.
 - `timer_purpose` mirrors the goal but refines for the active wait — `goal: Simmer curry — thickened` pairs with `timer_purpose: Break down tomatoes — pulpy` because the wait is *the tomatoes breaking down*, even though the eventual target state is *thickened curry*.
 - `timer_action` + `timer_location` provide the glanceable label on the floating pill ("SIMMERING · stove · 9:47"). Use `simmering` (gerund) plus the physical location of the timed item.
@@ -169,12 +186,12 @@ Three components held at three stations: the bird in the oven (passive wait), pa
   "version": 2,
   "language": "en",
   "mise_en_place": [
-    "1 whole chicken, ~1.6 kg, patted dry, salted, trussed",
-    "2 sprigs thyme, 1 lemon halved",
-    "1 small shallot, finely diced",
+    "1 whole chicken, ~1.6 kg",
+    "2 sprigs thyme, 1 lemon",
+    "1 small shallot",
     "200 ml chicken stock",
-    "2 tbsp cold butter, cubed",
-    "300 g tenderstem broccoli, trimmed",
+    "2 tbsp cold butter",
+    "300 g tenderstem broccoli",
     "salt, black pepper, 1 tbsp neutral oil"
   ],
   "streams": [
@@ -183,6 +200,18 @@ Three components held at three stations: the bird in the oven (passive wait), pa
     { "id": "greens", "name": "Greens" }
   ],
   "steps": [
+    {
+      "title": "Prep bird",
+      "goal": "Prep bird — dried, salted, trussed",
+      "body": "Pat the chicken dry, salt it generously all over, and truss the legs. Halve the lemon while the board is out.",
+      "ingredients": ["1 whole chicken (~1.6 kg)", "salt", "1 lemon"],
+      "timer_seconds": null,
+      "timer_purpose": null,
+      "timer_action": null,
+      "timer_location": null,
+      "stream_id": "bird",
+      "merges_from": []
+    },
     {
       "title": "Sear and roast bird",
       "goal": "Roast bird — 74°C in thigh",
@@ -198,8 +227,8 @@ Three components held at three stations: the bird in the oven (passive wait), pa
     {
       "title": "Sweat shallot",
       "goal": "Sweat shallot — soft, sweet",
-      "body": "While the bird roasts, set a small saucepan over medium-low. Sweat the diced shallot in 1 tsp pan drippings until soft and translucent, no colour.",
-      "ingredients": ["1 small shallot, diced"],
+      "body": "While the bird roasts, dice the shallot finely. Set a small saucepan over medium-low and sweat it in 1 tsp pan drippings until soft and translucent, no colour.",
+      "ingredients": ["1 small shallot"],
       "timer_seconds": 240,
       "timer_purpose": "Sweat shallot — translucent",
       "timer_action": "sweating",
@@ -222,7 +251,7 @@ Three components held at three stations: the bird in the oven (passive wait), pa
     {
       "title": "Blanch broccoli",
       "goal": "Blanch broccoli — bright, tender",
-      "body": "Drop the 300 g broccoli into salted boiling water. Cook until just tender and vibrant green; drain immediately.",
+      "body": "Trim the 300 g broccoli, then drop into salted boiling water. Cook until just tender and vibrant green; drain immediately.",
       "ingredients": ["300 g tenderstem broccoli"],
       "timer_seconds": 180,
       "timer_purpose": "Blanch broccoli — bright green",
@@ -260,6 +289,7 @@ Three components held at three stations: the bird in the oven (passive wait), pa
 ```
 
 Notes:
+- The bird's hands-on prep (dry, salt, truss) is substantial, so it opens the bird stream as its own beat. The shallot dice and broccoli trim are trivial single-ingredient prep — folded into the bodies of the steps that use them (rule 5).
 - Three independent streams converge at one Plate card. `merges_from` includes `bird` (the current stream) plus `sauce` and `greens`.
 - The bird's roast is a long passive wait — sauce + greens are scheduled *during* that wait, which is exactly what a bench sheet exposes.
 - Notice none of the goals read as "Step 4 — bla". They name a *verb-led action with a target state*: `Roast bird — 74°C in thigh`, `Mount sauce — coats spoon`.
@@ -274,8 +304,8 @@ One component, one pan, one bake. Linear flow. Single stream — no fabricated p
   "version": 2,
   "language": "en",
   "mise_en_place": [
-    "200 g dark chocolate, chopped",
-    "180 g unsalted butter, cubed",
+    "200 g dark chocolate",
+    "180 g unsalted butter",
     "200 g caster sugar",
     "3 large eggs",
     "100 g plain flour, sifted",
@@ -290,7 +320,7 @@ One component, one pan, one bake. Linear flow. Single stream — no fabricated p
     {
       "title": "Melt chocolate + butter",
       "goal": "Melt chocolate — glossy, smooth",
-      "body": "Set a heatproof bowl over barely simmering water. Add the 200 g chocolate and 180 g butter; stir gently until fully melted and glossy. Remove from heat.",
+      "body": "Chop the 200 g chocolate and cube the 180 g butter. Set a heatproof bowl over barely simmering water; add both and stir gently until fully melted and glossy. Remove from heat.",
       "ingredients": ["200 g dark chocolate", "180 g unsalted butter"],
       "timer_seconds": null,
       "timer_purpose": null,
@@ -353,6 +383,7 @@ One component, one pan, one bake. Linear flow. Single stream — no fabricated p
 
 Notes:
 - A single stream is fine — no merge card, no lane label. The bench-sheet shape is still a vertical column of goals (`Melt chocolate — glossy, smooth`, `Whisk batter — pale ribbon`, …).
+- The chocolate chop + butter cube is short, mechanically continuous prep feeding straight into the melt — folded into that step's body rather than its own beat (rule 5); the tin-lining and oven preheat stay in `mise_en_place` as equipment work.
 - The bake is the dominant passive wait; `timer_purpose` refines `goal` (`Bake top — set with crackle` → `Bake top — crackled, set`).
 - Even on the cool step, `goal` is action-led with a state (`Cool brownie — to room temp`), not just a noun ("Brownie cool") and not just an action ("let it cool").
 - `timer_action` (`baking`, `cooling`) + `timer_location` (`oven`, `counter`) feed the floating pill label.
