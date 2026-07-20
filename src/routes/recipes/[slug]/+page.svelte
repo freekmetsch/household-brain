@@ -343,8 +343,8 @@
 	onSaved={(payload) => {
 		recipe = {
 			...recipe,
-			isFreezerStaple: payload.is_freezer_staple ?? recipe.isFreezerStaple,
-			targetPortions: payload.target_portions ?? recipe.targetPortions
+			isFreezerStaple: payload.isFreezerStaple,
+			targetPortions: payload.targetPortions
 		};
 	}}
 />

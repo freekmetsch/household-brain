@@ -6,11 +6,13 @@
 	let {
 		open = $bindable(false),
 		title,
+		desktopCentered = false,
 		children,
 		onclose
 	}: {
 		open?: boolean;
 		title?: string;
+		desktopCentered?: boolean;
 		children: Snippet;
 		onclose?: () => void;
 	} = $props();
@@ -40,10 +42,14 @@
 	bind:this={dialog}
 	onclose={handleClose}
 	onclick={handleClick}
-	class="ui-z-sheet m-0 mx-auto mt-auto mb-0 w-full max-w-2xl bg-transparent p-0"
+	class="ui-z-sheet m-0 mx-auto mt-auto mb-0 w-full max-w-2xl bg-transparent p-0 {desktopCentered
+		? 'sm:m-auto sm:max-w-md'
+		: ''}"
 >
 	<div
-		class="max-h-[75dvh] overflow-y-auto rounded-t-2xl bg-base-100 shadow-2xl"
+		class="max-h-[75dvh] overflow-y-auto rounded-t-2xl bg-base-100 shadow-2xl {desktopCentered
+			? 'sm:rounded-2xl'
+			: ''}"
 		style="padding-bottom: env(safe-area-inset-bottom)"
 	>
 		{#if title}
