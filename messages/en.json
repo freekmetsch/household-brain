@@ -171,8 +171,6 @@
 	"recipes_addplan_source_label": "How will you make it?",
 	"recipes_addplan_source_freezer": "Serve from the freezer ({count} stocked)",
 	"recipes_addplan_source_fresh": "Cook it fresh",
-	"recipes_aiedit_placeholder": "e.g. make it vegan, halve the amounts…",
-	"recipes_aiedit_close_aria": "Close AI edit",
 	"recipes_freezer_week_of": "Week of {date}",
 	"recipes_freezer_toast_save_failed": "Save failed ({status})",
 	"recipes_freezer_portions_of_target": "{frozen} of {target} portions",

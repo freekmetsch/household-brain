@@ -11,3 +11,9 @@ Implemented UI-1 through UI-15 and AGENT-1 through AGENT-12. Added focused unit 
 
 ## 2026-07-20 15:33 | html-artifact | plan: recipe-ux-streamline
 Touched: docs/artifacts/2026-07-20-plan-recipe-ux-streamline.html
+
+## 2026-07-20 16:42 | html-artifact | archive: recipe-ux-streamline
+Touched: docs/artifacts/archive/2026-07-20-plan-recipe-ux-streamline.html
+
+## 2026-07-20 | shipped | recipe UX streamline
+Implemented RX-1 through RX-9, completed the cost-free browser matrix, passed the repository gates, and archived the shipped feature list and plan artifact.

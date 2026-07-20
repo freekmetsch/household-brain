@@ -34,7 +34,6 @@
 	} from '$lib/timer/messages';
 
 	export type BenchSheetController = {
-		regenerate: () => void;
 		resetSession: () => void;
 		hasActiveTimer: boolean;
 		hasProgress: boolean;
@@ -740,9 +739,6 @@
 	// fire the parent's reactive graph for unchanged values. The parent
 	// reads `hasActiveTimer` on click (edit-raw guard), so per-tick churn
 	// would re-run any of the parent's effects that touch the controller.
-	$effect(() => {
-		if (controller.regenerate !== regenerate) controller.regenerate = regenerate;
-	});
 	$effect(() => {
 		if (controller.resetSession !== resetCookSession) controller.resetSession = resetCookSession;
 	});

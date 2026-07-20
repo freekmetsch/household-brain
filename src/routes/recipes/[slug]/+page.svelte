@@ -100,7 +100,6 @@
 	}
 
 	let benchSheetController = $state<BenchSheetController>({
-		regenerate: () => {},
 		resetSession: () => {},
 		hasActiveTimer: false,
 		hasProgress: false,

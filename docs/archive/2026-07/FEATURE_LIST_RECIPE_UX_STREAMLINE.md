@@ -1,5 +1,5 @@
 # Feature List: Recipe UX Streamline
-_Status: Plan ready - 2026-07-20 (awaiting /run)_
+_Status: Shipped — 2026-07-20_
 
 ## Problem framing
 

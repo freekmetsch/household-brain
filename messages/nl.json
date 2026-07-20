@@ -171,8 +171,6 @@
 	"recipes_addplan_source_label": "Hoe maak je het klaar?",
 	"recipes_addplan_source_freezer": "Uit de vriezer serveren ({count} op voorraad)",
 	"recipes_addplan_source_fresh": "Vers koken",
-	"recipes_aiedit_placeholder": "bv. maak het veganistisch, halveer de hoeveelheden…",
-	"recipes_aiedit_close_aria": "Sluit AI-bewerking",
 	"recipes_freezer_week_of": "Week van {date}",
 	"recipes_freezer_toast_save_failed": "Opslaan mislukt ({status})",
 	"recipes_freezer_portions_of_target": "{frozen} van {target} porties",
