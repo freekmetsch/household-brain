@@ -1,10 +1,5 @@
-<!--
-	Sticky page header for the recipe detail route: back link, title, "+ Plan"
-	shortcut, and the ⋯ overflow menu (owns the menu open state, roving focus,
-	and click-away). Edit, photo, roles, and AI actions all live in the menu —
-	the toolbar itself stays two actions wide. Translation status rows ride
-	along under the toolbar. All actions are page-level and arrive as callbacks.
--->
+<!-- Sticky recipe task header. Primary actions stay visible; the overflow only
+     exists when a cooking session or stored photo makes a secondary action relevant. -->
 <script lang="ts">
 	import { base } from '$app/paths';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
@@ -22,15 +17,9 @@
 		translationLoading,
 		translationMessage,
 		onAddToPlan,
-		onToggleLanguage,
 		onEditRaw,
-		rolesMenuLabel,
 		hasCookProgress,
 		onResetCookProgress,
-		onRegenerateCookMode,
-		onForceRetranslate,
-		onAiEdit,
-		onPickPhoto,
 		onRemovePhoto,
 		onRetryTranslation
 	}: {
@@ -40,32 +29,26 @@
 		translationLoading: boolean;
 		translationMessage: string;
 		onAddToPlan: () => void;
-		onToggleLanguage: () => void;
 		onEditRaw: () => void;
-		// Non-null once every ingredient has a role: the inline coverage panel
-		// collapses into this quiet menu entry (label carries the n/n count).
-		rolesMenuLabel: string | null;
 		hasCookProgress: boolean;
 		onResetCookProgress: () => void;
-		onRegenerateCookMode: () => void;
-		onForceRetranslate: () => void;
-		onAiEdit: () => void;
-		onPickPhoto: () => void;
 		onRemovePhoto: () => void;
 		onRetryTranslation: (force: boolean) => void;
 	} = $props();
 
 	let menuOpen = $state(false);
+	let menuButton: HTMLButtonElement | null = $state(null);
+	let editButton: HTMLButtonElement | null = $state(null);
+	let hasOverflow = $derived(hasCookProgress || !!recipe.imageUrl);
 
-	// Every menu item closes the menu, then delegates to its page-level callback.
 	function menuAction(fn: () => void) {
 		return () => {
 			menuOpen = false;
+			editButton?.focus();
 			fn();
 		};
 	}
 
-	let menuButton: HTMLButtonElement | null = $state(null);
 	async function toggleMenu() {
 		menuOpen = !menuOpen;
 		if (menuOpen) {
@@ -101,12 +84,6 @@
 		e.preventDefault();
 		if (!menuOpen) void toggleMenu();
 	}
-
-	const pickPhoto = menuAction(() => onPickPhoto());
-
-	const openSource = menuAction(() => {
-		if (recipe.sourceUrl) window.open(recipe.sourceUrl, '_blank', 'noopener,noreferrer');
-	});
 </script>
 
 <svelte:window
@@ -117,166 +94,89 @@
 	}}
 />
 
-<header
-	class="sticky top-0 z-30 bg-base-100/95 backdrop-blur border-b border-base-200"
->
-	<div class="px-3 py-2 flex items-center gap-2">
+<header class="sticky top-0 z-30 border-b border-base-200 bg-base-100/95 backdrop-blur">
+	<div class="flex items-center gap-1.5 px-3 py-2">
 		<a
 			href="{base}/recipes"
 			class="btn btn-ghost btn-sm h-9 min-h-0 w-9 shrink-0 p-0"
 			aria-label={m.recipes_header_back_aria()}><Icon name="chevronLeft" /></a
 		>
-		<h1 class="text-[15px] font-semibold leading-tight flex-1 min-w-0 truncate">{displayTitle}</h1>
+		<h1 class="min-w-0 flex-1 truncate text-[15px] font-semibold leading-tight">{displayTitle}</h1>
 		<button
+			type="button"
 			class="btn btn-sm btn-primary shrink-0 gap-1"
-			onclick={() => {
-				onAddToPlan();
-			}}><Icon name="plus" class="h-3.5 w-3.5" /> {m.recipes_header_plan_button()}</button
+			onclick={onAddToPlan}><Icon name="plus" class="h-3.5 w-3.5" /> {m.recipes_header_plan_button()}</button
 		>
-		<div class="relative shrink-0" data-recipe-menu>
-			<button
-				bind:this={menuButton}
-				type="button"
-				class="btn btn-sm btn-ghost border border-base-300"
-				aria-haspopup="menu"
-				aria-expanded={menuOpen}
-				aria-label={m.recipes_header_more_actions_aria()}
-				onkeydown={handleMenuButtonKeydown}
-				onclick={(e) => {
-					e.stopPropagation();
-					void toggleMenu();
-				}}>⋯</button
-			>
-			{#if menuOpen}
-				<ul
-					role="menu"
-					class="absolute right-0 mt-1 w-56 rounded-xl border border-base-200 bg-base-100 shadow-xl z-40 py-1 text-sm"
-					transition:fly={{ y: -4, duration: MOTION_MICRO_MS }}
-					onkeydown={handleMenuKeydown}
+		<button bind:this={editButton} type="button" class="btn btn-sm btn-ghost shrink-0" onclick={onEditRaw}>
+			{m.recipes_edit_heading()}
+		</button>
+		{#if hasOverflow}
+			<div class="relative shrink-0" data-recipe-menu>
+				<button
+					bind:this={menuButton}
+					type="button"
+					class="btn btn-sm btn-ghost border border-base-300"
+					aria-haspopup="menu"
+					aria-expanded={menuOpen}
+					aria-label={m.recipes_header_more_actions_aria()}
+					onkeydown={handleMenuButtonKeydown}
+					onclick={(e) => {
+						e.stopPropagation();
+						void toggleMenu();
+					}}>⋯</button
 				>
-					<li>
-						<button
-							type="button"
-							role="menuitem"
-							data-recipe-menu-item
-							class="w-full text-left px-3 py-2 hover:bg-base-200"
-							onclick={menuAction(onEditRaw)}>✎ {m.recipes_edit_heading()}</button
-						>
-					</li>
-					{#if rolesMenuLabel}
-						<li>
-							<button
-								type="button"
-								role="menuitem"
-								data-recipe-menu-item
-								class="w-full text-left px-3 py-2 hover:bg-base-200"
-								onclick={menuAction(onEditRaw)}>✓ {rolesMenuLabel}</button
-							>
-						</li>
-					{/if}
-					<li>
-						<button
-							type="button"
-							role="menuitem"
-							data-recipe-menu-item
-							class="w-full text-left px-3 py-2 hover:bg-base-200"
-							onclick={pickPhoto}
-							>📷 {recipe.imageUrl
-								? m.recipes_header_replace_photo()
-								: m.recipes_header_add_photo()}</button
-						>
-					</li>
-					{#if hasCookProgress}
-						<li>
-							<button
-								type="button"
-								role="menuitem"
-								data-recipe-menu-item
-								class="w-full text-left px-3 py-2 hover:bg-base-200"
-								onclick={menuAction(onResetCookProgress)}>↺ {m.recipes_header_reset_cook_progress()}</button
-							>
-						</li>
-					{/if}
-					<li>
-						<button
-							type="button"
-							role="menuitem"
-							data-recipe-menu-item
-							class="w-full text-left px-3 py-2 hover:bg-base-200"
-							onclick={menuAction(onToggleLanguage)}
-							>🌐 {viewLang === 'en' ? m.recipes_header_view_in_dutch() : m.recipes_header_view_in_english()}</button
-						>
-					</li>
-					<li>
-						<button
-							type="button"
-							role="menuitem"
-							data-recipe-menu-item
-							class="w-full text-left px-3 py-2 hover:bg-base-200"
-							onclick={menuAction(onRegenerateCookMode)}>↻ {m.recipes_header_regenerate_cook_mode()}</button
-						>
-					</li>
-					{#if viewLang === 'en' && recipe.translationStatus === 'ready'}
-						<li>
-							<button
-								type="button"
-								role="menuitem"
-								data-recipe-menu-item
-								class="w-full text-left px-3 py-2 hover:bg-base-200"
-								onclick={menuAction(onForceRetranslate)}>↻ {m.recipes_header_retranslate()}</button
-							>
-						</li>
-					{/if}
-					<li>
-						<button
-							type="button"
-							role="menuitem"
-							data-recipe-menu-item
-							class="w-full text-left px-3 py-2 hover:bg-base-200"
-							onclick={menuAction(onAiEdit)}>✦ {m.recipes_header_ask_ai()}</button
-						>
-					</li>
-					{#if recipe.imageUrl}
-						<li>
-							<button
-								type="button"
-								role="menuitem"
-								data-recipe-menu-item
-								class="w-full text-left px-3 py-2 hover:bg-base-200 text-error"
-								onclick={menuAction(onRemovePhoto)}>🗑 {m.recipes_header_remove_photo()}</button
-							>
-						</li>
-					{/if}
-					{#if recipe.sourceUrl}
-						<li>
-							<button
-								type="button"
-								role="menuitem"
-								data-recipe-menu-item
-								class="w-full text-left px-3 py-2 hover:bg-base-200"
-								onclick={openSource}>↗ {m.recipes_header_open_source()}</button
-							>
-						</li>
-					{/if}
-				</ul>
-			{/if}
-		</div>
+				{#if menuOpen}
+					<ul
+						role="menu"
+						class="absolute right-0 z-40 mt-1 w-56 rounded-xl border border-base-200 bg-base-100 py-1 text-sm shadow-xl"
+						transition:fly={{ y: -4, duration: MOTION_MICRO_MS }}
+						onkeydown={handleMenuKeydown}
+					>
+						{#if hasCookProgress}
+							<li>
+								<button
+									type="button"
+									role="menuitem"
+									data-recipe-menu-item
+									class="min-h-11 w-full px-3 py-2 text-left hover:bg-base-200"
+									onclick={menuAction(onResetCookProgress)}>{m.recipes_header_reset_cook_progress()}</button
+								>
+							</li>
+						{/if}
+						{#if recipe.imageUrl}
+							<li class={hasCookProgress ? 'mt-1 border-t border-base-200 pt-1' : ''}>
+								<button
+									type="button"
+									role="menuitem"
+									data-recipe-menu-item
+									class="min-h-11 w-full px-3 py-2 text-left text-error hover:bg-base-200"
+									onclick={menuAction(onRemovePhoto)}>{m.recipes_header_remove_photo()}</button
+								>
+							</li>
+						{/if}
+					</ul>
+				{/if}
+			</div>
+		{/if}
 	</div>
 	{#if viewLang === 'en' && translationLoading}
-		<div class="px-3 pb-2 flex items-center gap-2 text-[11px] text-base-content/60">
+		<div class="flex items-center gap-2 px-3 pb-2 text-[11px] text-base-content/60">
 			<Spinner size="xs" />
 			<span>{m.recipes_header_translating()}</span>
 		</div>
 	{:else if viewLang === 'en' && translationMessage}
-		<button
-			class="w-full px-3 pb-2 text-left text-[11px] text-warning"
-			onclick={() => onRetryTranslation(false)}>{translationMessage}</button
-		>
+		<div class="flex items-center gap-2 px-3 pb-2 text-[11px] text-warning" role="status">
+			<span class="min-w-0 flex-1">{translationMessage}</span>
+			<button type="button" class="btn btn-ghost btn-xs shrink-0" onclick={() => onRetryTranslation(false)}>
+				{m.recipes_translation_retry_button()}
+			</button>
+		</div>
 	{:else if viewLang === 'en' && recipe.translationStatus === 'error'}
-		<button
-			class="w-full px-3 pb-2 text-left text-[11px] text-warning"
-			onclick={() => onRetryTranslation(true)}
-			>{m.recipes_translation_failed_retry()}</button
-		>
+		<div class="flex items-center gap-2 px-3 pb-2 text-[11px] text-warning" role="status">
+			<span class="min-w-0 flex-1">{m.recipes_translation_failed_retry()}</span>
+			<button type="button" class="btn btn-ghost btn-xs shrink-0" onclick={() => onRetryTranslation(true)}>
+				{m.recipes_translation_retry_button()}
+			</button>
+		</div>
 	{/if}
 </header>

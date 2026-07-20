@@ -15,6 +15,7 @@
 	import { extractTimers } from '$lib/timer_extract';
 	import { fmtClock } from './cook-mode/palette';
 	import { m } from '$lib/paraglide/messages';
+	import { parseRecipeSource } from '$lib/recipe_source';
 
 	type Ingredient = { name: string; amount: string; unit?: string };
 
@@ -24,6 +25,7 @@
 		ingredientStock: boolean[];
 		viewLang: 'en' | 'nl';
 		servings: number | null;
+		sourceUrl?: string | null;
 		// Optional: the generating path renders its own progress banner above
 		// this component instead.
 		bannerMessage?: string;
@@ -39,6 +41,7 @@
 		ingredientStock,
 		viewLang,
 		servings,
+		sourceUrl,
 		bannerMessage,
 		onRetry,
 		activeTimer = $bindable(false)
@@ -87,6 +90,8 @@
 	// Cache the regex scan per directions[] reference. Bench-sheet flips
 	// (lang toggle, etc.) shouldn't re-scan the same text.
 	let timersByDirection = $derived(directions.map(extractTimers));
+
+	let source = $derived(parseRecipeSource(sourceUrl));
 </script>
 
 <div class="px-3 pt-3 pb-32">
@@ -94,9 +99,21 @@
 		<div class="alert alert-warning text-sm mb-4 flex items-start gap-2">
 			<div class="flex-1">{bannerMessage}</div>
 			{#if onRetry}
-				<button class="btn btn-xs btn-ghost border border-base-content/20" onclick={onRetry}>↻ {m.recipes_fallback_retry_button()}</button>
+				<button class="btn btn-xs btn-ghost border border-base-content/20" onclick={onRetry}>{m.recipes_retry_cooking_view()}</button>
 			{/if}
 		</div>
+	{/if}
+
+	{#if source}
+		<p class="mb-4 text-xs text-base-content/60">
+			{m.recipes_source_label()}
+			<a
+				href={source.href}
+				target="_blank"
+				rel="noopener noreferrer"
+				class="font-medium text-base-content underline underline-offset-2">{source.host} ↗</a
+			>
+		</p>
 	{/if}
 
 	{#if servings}

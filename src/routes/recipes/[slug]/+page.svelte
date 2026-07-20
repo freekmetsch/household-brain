@@ -45,7 +45,9 @@
 		})
 	);
 
-	let viewLang = $state<'en' | 'nl'>(untrack(() => data.recipeLang));
+	let viewLang = $state<'en' | 'nl'>(
+		untrack(() => (data.recipe.language === 'en' ? 'en' : data.recipeLang))
+	);
 	let translationLoading = $state(false);
 	let translationMessage = $state('');
 
@@ -110,7 +112,8 @@
 		ingredients: displayIngredients,
 		ingredientStock: data.ingredientStock,
 		viewLang,
-		servings: recipe.servings
+		servings: recipe.servings,
+		sourceUrl: recipe.sourceUrl
 	});
 
 	let imageUploading = $state(false);
@@ -237,10 +240,6 @@
 		});
 	}
 
-	function openRecipeAiEdit() {
-		chatAgent.open({ draft: m.recipes_agent_edit_prefill({ title: displayTitle }) });
-	}
-
 	$effect(() =>
 		chatAgent.publishScreen({
 			v: 1,
@@ -285,17 +284,9 @@
 	onAddToPlan={() => {
 		addToPlanOpen = true;
 	}}
-	onToggleLanguage={() => setViewLanguage(viewLang === 'en' ? 'nl' : 'en')}
 	onEditRaw={openEditRaw}
-	rolesMenuLabel={data.roleCoverage.complete
-		? `${m.recipes_roles_heading()} · ${data.roleCoverage.classified}/${data.roleCoverage.total}`
-		: null}
 	hasCookProgress={benchSheetController.hasProgress}
 	onResetCookProgress={resetCookProgress}
-	onRegenerateCookMode={() => benchSheetController.regenerate()}
-	onForceRetranslate={() => void requestTranslation(true)}
-	onAiEdit={openRecipeAiEdit}
-	onPickPhoto={() => imageFileInput?.click()}
 	onRemovePhoto={() => void deleteImage()}
 	onRetryTranslation={(force) => void requestTranslation(force)}
 />
@@ -357,6 +348,32 @@
 		};
 	}}
 />
+
+<div class="flex items-center justify-between gap-3 px-3 pt-3 text-xs">
+	<span class="font-medium text-base-content/60">{m.recipes_language_label()}</span>
+	{#if recipe.language === 'en'}
+		<span class="font-semibold">{m.recipes_language_english()}</span>
+	{:else}
+		<div
+			class="join rounded-lg border border-base-300 bg-base-100 p-0.5"
+			role="group"
+			aria-label={m.recipes_language_label()}
+		>
+			<button
+				type="button"
+				class="btn btn-xs join-item min-h-8 px-3 {viewLang === 'nl' ? 'btn-primary' : 'btn-ghost'}"
+				aria-pressed={viewLang === 'nl'}
+				onclick={() => setViewLanguage('nl')}>NL</button
+			>
+			<button
+				type="button"
+				class="btn btn-xs join-item min-h-8 px-3 {viewLang === 'en' ? 'btn-primary' : 'btn-ghost'}"
+				aria-pressed={viewLang === 'en'}
+				onclick={() => setViewLanguage('en')}>EN</button
+			>
+		</div>
+	{/if}
+</div>
 
 <BenchSheet
 	recipeSlug={recipe.slug}

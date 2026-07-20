@@ -49,6 +49,7 @@
 		ingredientStock: boolean[];
 		viewLang: 'en' | 'nl';
 		servings: number | null;
+		sourceUrl: string | null;
 	};
 
 	type Props = {
@@ -801,6 +802,7 @@
 		ingredientStock={fallback.ingredientStock}
 		viewLang={fallback.viewLang}
 		servings={fallback.servings}
+		sourceUrl={fallback.sourceUrl}
 		bind:activeTimer={rawTimerActive}
 	/>
 {:else if loading}
@@ -819,13 +821,14 @@
 		ingredientStock={fallback.ingredientStock}
 		viewLang={fallback.viewLang}
 		servings={fallback.servings}
+		sourceUrl={fallback.sourceUrl}
 		bannerMessage={m.benchsheet_paused_banner({ reason: aiPausedReason })}
 		onRetry={() => loadCookMode(true)}
 	/>
 {:else if loadError}
 	<div class="flex flex-col items-center justify-center gap-3 text-center p-5 min-h-[40vh]">
 		<p class="text-sm">{loadError}</p>
-		<button class="btn btn-sm btn-primary" onclick={() => loadCookMode(false)}>{m.benchsheet_try_again_button()}</button>
+		<button class="btn btn-sm btn-primary" onclick={() => loadCookMode(false)}>{m.recipes_retry_cooking_view()}</button>
 	</div>
 {:else if cookMode}
 	{#if fallback.directions.length > 0}
@@ -849,6 +852,7 @@
 				ingredientStock={fallback.ingredientStock}
 				viewLang={fallback.viewLang}
 				servings={fallback.servings}
+				sourceUrl={fallback.sourceUrl}
 				bind:activeTimer={rawTimerActive}
 			/>
 		</div>
