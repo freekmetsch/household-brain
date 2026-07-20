@@ -22,9 +22,9 @@
 		{ path: '/', icon: 'home', label: m.nav_home() },
 		{ path: '/inventory', icon: 'jar', label: m.nav_stock() },
 		{ path: '/meal-plan', icon: 'calendar', label: m.nav_meals() },
-		{ path: '/shopping', icon: 'basket', label: m.nav_shopping_short() },
+		{ path: '/shopping', icon: 'basket', label: m.nav_shopping() },
 		{ path: '/recipes', icon: 'chefHat', label: m.nav_recipes() },
-		{ path: '/settings', icon: 'settings', label: m.nav_more() }
+		{ path: '/settings', icon: 'settings', label: m.nav_settings() }
 	];
 
 	const isActive = (path: string) => {
@@ -49,7 +49,7 @@
 				: 'text-base-content/40 hover:text-base-content/70'}"
 		>
 			<Icon name={tab.icon} class="h-5 w-5 shrink-0" />
-			<span class="px-1 text-[10px] font-medium leading-none"
+			<span class="max-w-full px-0.5 text-center text-[9px] font-medium leading-tight min-[360px]:text-[10px]"
 				>{tab.label}</span
 			>
 		</a>

@@ -1,6 +1,6 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"nav_home": "Home",
+	"nav_home": "Assistent",
 	"nav_stock": "Voorraad",
 	"nav_meals": "Planning",
 	"nav_shopping": "Boodschappen",
@@ -774,8 +774,6 @@
 	"settings_mealplan_suggest_count_label": "Suggesties per keer",
 	"settings_mealplan_suggest_count_hint": "Hoeveel maaltijden één tik op Suggereer oplevert.",
 	"ui_loading_label": "Laden",
-	"nav_shopping_short": "Lijst",
-	"nav_more": "Meer",
 	"food_category_meat": "Vlees",
 	"food_category_fish": "Vis",
 	"food_category_vegetarian": "Vegetarisch",
