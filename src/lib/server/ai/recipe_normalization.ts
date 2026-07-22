@@ -1,9 +1,10 @@
 import { and, asc, eq, isNull, lt } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from '$lib/server/db/schema';
-import type { Ingredient } from '$lib/recipe_ingredient';
+import { mergeLiveIngredients, type Ingredient } from '$lib/recipe_ingredient';
 import { checkDailyCap } from '$lib/server/ai/client';
 import { enrichRecipeStructure, type ScrapedRecipe } from '$lib/server/ai/recipe_ingest';
+import { updateCanonicalRecipe } from '$lib/server/recipe_mutations';
 
 type DB = BetterSQLite3Database<typeof schema>;
 
@@ -76,30 +77,40 @@ export async function normalizeLegacyRecipes(
 		const proposed = await enrich(asScrapedRecipe(candidate));
 		processed += 1;
 		const sourceUpdatedAt = candidate.updatedAt;
+		const compatibleIngredients = mergeLiveIngredients(
+			candidate.ingredients,
+			proposed.structureVersion === 2 ? proposed.ingredients : (proposed.structureDraft ?? []),
+			proposed.ingredientSourceIndexes
+		);
 		const changed = db.transaction((tx) => {
-			const whereCurrent = and(eq(schema.recipes.id, candidate.id), eq(schema.recipes.updatedAt, sourceUpdatedAt));
 			if (proposed.structureVersion === 2) {
-				return tx.update(schema.recipes).set({
-					ingredients: proposed.ingredients,
-					structureVersion: 2,
-					structureDraft: null,
-					structureDraftSourceUpdatedAt: null,
-					needsReview: false,
-					reviewReason: null,
-					cookModeJson: null,
-					cookModeGeneratedAt: null,
-					ingredientsEn: null,
-					translationStatus: candidate.language === 'en' ? 'ready' : 'pending',
-					translatedAt: null,
-					updatedAt: new Date()
-				}).where(whereCurrent).run().changes;
+				return updateCanonicalRecipe(tx, {
+					recipeId: candidate.id,
+					expectedRevision: candidate.contentRevision,
+					changes: {
+						ingredients: compatibleIngredients,
+						structureVersion: 2,
+						structureDraft: null,
+						structureDraftSourceUpdatedAt: null,
+						needsReview: false,
+						reviewReason: null,
+						cookModeJson: null,
+						cookModeGeneratedAt: null,
+						ingredientsEn: null,
+						translationStatus: candidate.language === 'en' ? 'ready' : 'pending',
+						translatedAt: null
+					}
+				}) ? 1 : 0;
 			}
 			return tx.update(schema.recipes).set({
-				structureDraft: proposed.structureDraft,
+				structureDraft: compatibleIngredients,
 				structureDraftSourceUpdatedAt: sourceUpdatedAt,
 				needsReview: true,
 				reviewReason: proposed.enrichmentReviewReason ?? 'Check the proposed ingredient structure.'
-			}).where(whereCurrent).run().changes;
+			}).where(and(
+				eq(schema.recipes.id, candidate.id),
+				eq(schema.recipes.contentRevision, candidate.contentRevision)
+			)).run().changes;
 		});
 		if (changed === 0) {
 			stale += 1;

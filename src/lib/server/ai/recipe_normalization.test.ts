@@ -14,6 +14,7 @@ vi.mock('$lib/server/recipes/prefs', () => ({ getAutoTranslateOnImport: () => fa
 import { eq } from 'drizzle-orm';
 import * as schema from '$lib/server/db/schema';
 import { createTestDb } from '$lib/server/test_db';
+import { updateCanonicalRecipe } from '$lib/server/recipe_mutations';
 import { normalizeLegacyRecipes } from './recipe_normalization';
 
 function seed(db: ReturnType<typeof createTestDb>, slug = 'preisoep') {
@@ -80,8 +81,12 @@ describe('legacy recipe normalization', () => {
 		const result = await normalizeLegacyRecipes(db, {
 			capExceeded: () => false,
 			enrich: async (data) => {
-				db.update(schema.recipes).set({ title: 'Handmatig aangepast', updatedAt: new Date(Date.now() + 1000) })
-					.where(eq(schema.recipes.id, recipe.id)).run();
+				updateCanonicalRecipe(db, {
+					recipeId: recipe.id,
+					expectedRevision: recipe.contentRevision,
+					changes: { title: 'Handmatig aangepast' },
+					now: new Date(Date.now() + 1000)
+				});
 				return { ...data, ingredients: [{ name: 'prei', amount: '2' }], structureVersion: 2, structureDraft: null, enrichmentReviewReason: null };
 			}
 		});

@@ -287,6 +287,7 @@
 
 		<input type="hidden" name="ingredients" value={serializedIngredients} />
 		<input type="hidden" name="directions" value={serializedDirections} />
+		<input type="hidden" name="contentRevision" value={data.recipe.contentRevision} />
 		<input type="hidden" name="acceptStructureDraft" value={data.reviewingStructureDraft ? '1' : '0'} />
 	</form>
 </div>

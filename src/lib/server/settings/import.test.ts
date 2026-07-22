@@ -152,12 +152,52 @@ describe('validateImportFile', () => {
 		if (legacy.ok) {
 			expect(legacy.data.recipes[0].scalingMode).toBe('scalable');
 			expect(legacy.data.recipes[0].structureVersion).toBe(1);
+			expect(legacy.data.recipes[0].contentRevision).toBe(1);
 		}
 
 		const invalid = validateImportFile(emptyFile({
 			recipes: [baseRecipe({ ingredients: [{ name: 'kroepoek', amount: '1', origin: 'ai_suggested' }] })]
 		}));
 		expect(invalid.ok).toBe(false);
+	});
+
+	it('restores trusted ingredient provenance and future fields', () => {
+		const validation = validateImportFile(
+			emptyFile({
+				recipes: [
+					baseRecipe({
+						contentRevision: 7,
+						ingredients: [
+							{
+								id: 'ingredient-7',
+								name: 'Parmezaan',
+								amount: '50',
+								origin: 'ai_accepted',
+								futureField: 'keep',
+								substitutes: [{ name: 'Pecorino', futureField: 'keep-nested' }]
+							}
+						]
+					})
+				]
+			})
+		);
+		expect(validation.ok).toBe(true);
+		if (!validation.ok) return;
+
+		const db = createTestDb();
+		expect(importBootstrap(db, validation.data).ok).toBe(true);
+		const restored = db.select().from(schema.recipes).get()!;
+		expect(restored.contentRevision).toBe(7);
+		expect(restored.ingredients).toEqual([
+			{
+				id: 'ingredient-7',
+				name: 'Parmezaan',
+				amount: '50',
+				origin: 'ai_accepted',
+				futureField: 'keep',
+				substitutes: [{ name: 'Pecorino', futureField: 'keep-nested' }]
+			}
+		]);
 	});
 });
 

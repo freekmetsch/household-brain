@@ -7,6 +7,7 @@ export type SubstituteDraft = {
 
 export type IngredientDraft = {
 	clientId: string;
+	id?: string;
 	name: string;
 	amount: string;
 	unit?: string;
@@ -16,7 +17,7 @@ export type IngredientDraft = {
 	component?: string;
 	purchaseForm?: 'fresh' | 'preserved' | 'frozen' | 'dried' | 'any';
 	scale?: 'linear' | 'whole' | 'fixed';
-	origin?: 'source' | 'ai_suggested';
+	origin?: 'source' | 'ai_suggested' | 'ai_accepted';
 	substitutes?: SubstituteDraft[];
 };
 
@@ -59,7 +60,10 @@ export function hydrateDirections(items: Array<string | DirectionDraft>): Direct
 export function serializeIngredients(items: IngredientDraft[]): string {
 	return JSON.stringify(
 		items
-			.map((ingredient) => ({
+			.map((ingredient) => {
+				const { clientId: _clientId, substitutes, ...stored } = ingredient;
+				return {
+				...stored,
 				name: ingredient.name.trim(),
 				amount: ingredient.amount.trim(),
 				unit: ingredient.unit?.trim() || undefined,
@@ -69,15 +73,22 @@ export function serializeIngredients(items: IngredientDraft[]): string {
 				component: ingredient.component?.trim() || undefined,
 				purchaseForm: ingredient.purchaseForm,
 				scale: ingredient.scale,
-				origin: ingredient.origin,
-				substitutes: (ingredient.substitutes ?? [])
-					.map((substitute) => ({
+				// ai_accepted is server-owned. Omitting it lets the live boundary
+				// retain an existing trusted value without accepting a forged one.
+				origin: ingredient.origin === 'ai_accepted' ? undefined : ingredient.origin,
+				substitutes: (substitutes ?? [])
+					.map((substitute) => {
+						const { clientId: _substituteClientId, ...storedSubstitute } = substitute;
+						return {
+						...storedSubstitute,
 						name: substitute.name.trim(),
 						kind: substitute.kind,
 						note: substitute.note?.trim() || undefined
-					}))
+						};
+					})
 					.filter((substitute) => substitute.name.length > 0)
-			}))
+				};
+			})
 			.filter((ingredient) => ingredient.name.length > 0)
 	);
 }

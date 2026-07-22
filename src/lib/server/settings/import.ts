@@ -9,6 +9,7 @@ import { z } from 'zod';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from '$lib/server/db/schema';
 import { rowCount } from '$lib/server/settings/reset';
+import { TrustedRestoreIngredientSchema } from '$lib/recipe_ingredient';
 
 type DB = BetterSQLite3Database<typeof schema>;
 
@@ -48,33 +49,6 @@ const InventoryItemImport = z.object({
 	deletedAt: zTimestampOrNull
 });
 
-const IngredientSubstituteImport = z.object({
-	name: z.string().min(1),
-	kind: z.enum(['protein', 'spice', 'vegetable', 'other']).optional(),
-	note: z.string().optional()
-});
-
-const IngredientImport = z.object({
-	name: z.string(),
-	amount: z.string(),
-	unit: z.string().optional(),
-	preparation: z.string().optional(),
-	role: z.enum(['cook_in', 'serve_fresh']).optional(),
-	optional: z.boolean().optional(),
-	component: z.string().optional(),
-	purchaseForm: z.enum(['fresh', 'preserved', 'frozen', 'dried', 'any']).optional(),
-	scale: z.enum(['linear', 'whole', 'fixed']).optional(),
-	origin: z.enum(['source', 'ai_suggested']).optional(),
-	substitutes: z.array(IngredientSubstituteImport).optional()
-}).superRefine((ingredient, ctx) => {
-	if (ingredient.origin === 'ai_suggested' && ingredient.optional !== true) {
-		ctx.addIssue({
-			code: z.ZodIssueCode.custom,
-			message: 'AI-suggested ingredients must be optional'
-		});
-	}
-});
-
 const RecipeImport = z.object({
 	id: z.number().int(),
 	slug: z.string().min(1),
@@ -87,12 +61,13 @@ const RecipeImport = z.object({
 	servings: z.number().int().nullable(),
 	scalingMode: z.enum(['scalable', 'fixed_batch']).default('scalable'),
 	structureVersion: z.number().int().min(1).default(1),
-	structureDraft: z.array(IngredientImport).nullable().default(null),
+	contentRevision: z.number().int().positive().default(1),
+	structureDraft: z.array(TrustedRestoreIngredientSchema).nullable().default(null),
 	structureDraftSourceUpdatedAt: zTimestampOrNull.default(null),
 	totalTimeMin: z.number().int().nullable(),
 	sourceUrl: z.string().nullable(),
 	imageUrl: z.string().nullable(),
-	ingredients: z.array(IngredientImport),
+	ingredients: z.array(TrustedRestoreIngredientSchema),
 	directions: z.array(z.string()),
 	notes: z.string().nullable(),
 	rating: z.number().int().nullable(),

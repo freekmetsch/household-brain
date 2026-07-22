@@ -232,6 +232,82 @@ describe('edit_recipe', () => {
 		// They are displayed in translation, so the EN cache must refresh.
 		expect(row.ingredientsEn).toBeNull();
 		expect(row.translationStatus).toBe('pending');
+		expect(row.contentRevision).toBe(2);
+	});
+
+	it('rejects trusted provenance in model input but preserves it on an existing ingredient', async () => {
+		const db = createTestDb();
+		seedRecipe(db, 'risotto', [
+			{
+				id: 'ingredient-1',
+				name: 'Parmezaan',
+				amount: '50',
+				origin: 'ai_accepted',
+				futureField: 'keep'
+			}
+		]);
+
+		const rejected = (await executeToolCall(
+			'edit_recipe',
+			{
+				slug: 'risotto',
+				add_ingredients: [
+					{ name: 'Basilicum', amount: '1', optional: true, origin: 'ai_accepted' }
+				]
+			},
+			db,
+			1,
+			turnCtx()
+		)) as ErrorResult;
+		expect(rejected.error).toMatch(/^Invalid input for add_ingredients/);
+
+		const edited = (await executeToolCall(
+			'edit_recipe',
+			{ slug: 'risotto', set_ingredient_roles: [{ name: 'Parmezaan', role: 'serve_fresh' }] },
+			db,
+			1,
+			turnCtx()
+		)) as EditResult;
+		expect(isOk(edited)).toBe(true);
+		expect(recipeBySlug(db, 'risotto').ingredients).toEqual([
+			{
+				id: 'ingredient-1',
+				name: 'Parmezaan',
+				amount: '50',
+				origin: 'ai_accepted',
+				futureField: 'keep',
+				role: 'serve_fresh'
+			}
+		]);
+	});
+
+	it('rejects ingredient IDs in model creation and addition paths', async () => {
+		const db = createTestDb();
+		seedRecipe(db, 'soep', [{ name: 'Ui', amount: '1' }]);
+
+		const addRejected = (await executeToolCall(
+			'edit_recipe',
+			{ slug: 'soep', add_ingredients: [{ id: 'forged', name: 'Prei', amount: '1' }] },
+			db,
+			1,
+			turnCtx()
+		)) as ErrorResult;
+		expect(addRejected.error).toMatch(/^Invalid input for add_ingredients/);
+
+		const createRejected = (await executeToolCall(
+			'add_recipe',
+			{
+				title: 'Nieuwe soep',
+				slug: 'nieuwe-soep',
+				ingredients: [{ id: 'forged', name: 'Ui', amount: '1' }],
+				directions: ['Kook.']
+			},
+			db,
+			1,
+			turnCtx()
+		)) as ErrorResult;
+		expect(createRejected.error).toMatch(/^Invalid input for ingredients/);
+		expect(db.select().from(schema.recipes).where(eq(schema.recipes.slug, 'nieuwe-soep')).get()).toBeUndefined();
 	});
 
 	it('reports a clean error for an unknown recipe', async () => {

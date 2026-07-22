@@ -218,14 +218,14 @@ function assertLinkable(db: DB, mealRecipeId: number, subRecipeId: number): void
 }
 
 /** Link one sub-recipe to a meal (idempotent on the unique pair). */
-export function addSubRecipe(db: DB, mealRecipeId: number, subRecipeId: number): void {
+export function addSubRecipe(db: DB, mealRecipeId: number, subRecipeId: number): boolean {
 	assertLinkable(db, mealRecipeId, subRecipeId);
 	const existing = db
 		.select({ id: schema.mealSubRecipes.id })
 		.from(schema.mealSubRecipes)
 		.where(eq(schema.mealSubRecipes.mealRecipeId, mealRecipeId))
 		.all();
-	db.insert(schema.mealSubRecipes)
+	const result = db.insert(schema.mealSubRecipes)
 		.values({
 			mealRecipeId,
 			subRecipeId,
@@ -234,10 +234,11 @@ export function addSubRecipe(db: DB, mealRecipeId: number, subRecipeId: number):
 		})
 		.onConflictDoNothing()
 		.run();
+	return result.changes > 0;
 }
 
-export function removeSubRecipe(db: DB, mealRecipeId: number, subRecipeId: number): void {
-	db.delete(schema.mealSubRecipes)
+export function removeSubRecipe(db: DB, mealRecipeId: number, subRecipeId: number): boolean {
+	const result = db.delete(schema.mealSubRecipes)
 		.where(
 			and(
 				eq(schema.mealSubRecipes.mealRecipeId, mealRecipeId),
@@ -245,6 +246,7 @@ export function removeSubRecipe(db: DB, mealRecipeId: number, subRecipeId: numbe
 			)
 		)
 		.run();
+	if (result.changes === 0) return false;
 	// Re-pack sortOrder densely so future appends stay stable.
 	const remaining = db
 		.select({ id: schema.mealSubRecipes.id })
@@ -258,4 +260,5 @@ export function removeSubRecipe(db: DB, mealRecipeId: number, subRecipeId: numbe
 			.where(eq(schema.mealSubRecipes.id, row.id))
 			.run();
 	});
+	return true;
 }

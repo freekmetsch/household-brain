@@ -103,6 +103,7 @@ export const recipes = sqliteTable('recipes', {
 	servings: integer('servings'),
 	scalingMode: text('scaling_mode').notNull().default('scalable').$type<RecipeScalingMode>(),
 	structureVersion: integer('structure_version').notNull().default(1),
+	contentRevision: integer('content_revision').notNull().default(1),
 	structureDraft: text('structure_draft', { mode: 'json' }).$type<Ingredient[]>(),
 	structureDraftSourceUpdatedAt: integer('structure_draft_source_updated_at', { mode: 'timestamp' }),
 	totalTimeMin: integer('total_time_min'),

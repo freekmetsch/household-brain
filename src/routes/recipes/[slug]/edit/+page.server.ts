@@ -6,8 +6,9 @@ import { db } from '$lib/server/db/index';
 import { recipes } from '$lib/server/db/schema';
 import { kickCookModeGeneration } from '$lib/server/ai/cook_mode';
 import { recipeIngredientsEqual } from '$lib/recipe_edit';
+import { updateCanonicalRecipe } from '$lib/server/recipe_mutations';
 import type { Actions, PageServerLoad } from './$types';
-import { IngredientSchema } from '$lib/recipe_ingredient';
+import { LiveIngredientSchema, mergeLiveIngredients } from '$lib/recipe_ingredient';
 
 const RecipeEditSchema = z.object({
 	title: z.string().trim().min(1, 'title required').max(200),
@@ -20,8 +21,9 @@ const RecipeEditSchema = z.object({
 		.refine((value) => value.startsWith('https://') || value.startsWith('http://'), 'source URL must use http or https')
 		.nullable(),
 	servings: z.number().int().positive().max(99).nullable(),
+	contentRevision: z.number().int().positive(),
 	acceptStructureDraft: z.boolean().default(false),
-	ingredients: z.array(IngredientSchema).min(1, 'at least one ingredient'),
+	ingredients: z.array(LiveIngredientSchema).min(1, 'at least one ingredient'),
 	directions: z.array(z.string().trim().min(1, 'empty direction')).min(1, 'at least one direction')
 });
 
@@ -33,6 +35,7 @@ function parseFormPayload(form: FormData): FormPayload {
 	const rawIngredients = String(form.get('ingredients') ?? '[]');
 	const rawDirections = String(form.get('directions') ?? '[]');
 	const rawServings = form.get('servings');
+	const rawContentRevision = form.get('contentRevision');
 
 	const ingredients = JSON.parse(rawIngredients);
 	const directions = JSON.parse(rawDirections);
@@ -43,6 +46,7 @@ function parseFormPayload(form: FormData): FormPayload {
 		notes: form.get('notes') ? String(form.get('notes')).trim() || null : null,
 		sourceUrl: form.get('sourceUrl') ? String(form.get('sourceUrl')).trim() || null : null,
 		servings: rawServings && String(rawServings).trim() ? Number(rawServings) : null,
+		contentRevision: Number(rawContentRevision),
 		acceptStructureDraft: form.get('acceptStructureDraft') === '1',
 		ingredients,
 		directions
@@ -82,6 +86,9 @@ export const actions: Actions = {
 
 		const current = db.select().from(recipes).where(eq(recipes.slug, params.slug)).get();
 		if (!current) return fail(404, { error: 'Recipe not found' });
+		if (current.contentRevision !== payload.contentRevision) {
+			return fail(409, { error: 'This recipe changed while you were editing it. Reload and try again.' });
+		}
 		if (
 			payload.acceptStructureDraft &&
 			(current.structureDraft == null ||
@@ -89,8 +96,15 @@ export const actions: Actions = {
 		) {
 			return fail(409, { error: 'This recipe changed after the suggestion was created. Run the improvement again.' });
 		}
+		let ingredients;
+		try {
+			const mergeBase = payload.acceptStructureDraft ? current.structureDraft : current.ingredients;
+			ingredients = mergeLiveIngredients(mergeBase, payload.ingredients);
+		} catch (e) {
+			return fail(400, { error: e instanceof Error ? e.message : 'Invalid ingredients' });
+		}
 		const sameJson = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
-		const ingredientsChanged = !recipeIngredientsEqual(current.ingredients, payload.ingredients);
+		const ingredientsChanged = !recipeIngredientsEqual(current.ingredients, ingredients);
 		const cookingInputsChanged =
 			current.title !== payload.title ||
 			current.language !== payload.language ||
@@ -104,9 +118,10 @@ export const actions: Actions = {
 			ingredientsChanged ||
 			!sameJson(current.directions, payload.directions);
 
-		const updated = db
-			.update(recipes)
-			.set({
+		const updated = updateCanonicalRecipe(db, {
+			recipeId: current.id,
+			expectedRevision: payload.contentRevision,
+			changes: {
 				title: payload.title,
 				language: payload.language,
 				notes: payload.notes,
@@ -115,7 +130,7 @@ export const actions: Actions = {
 				...(payload.acceptStructureDraft
 					? { structureVersion: 2, structureDraft: null, structureDraftSourceUpdatedAt: null }
 					: {}),
-				ingredients: payload.ingredients,
+				ingredients,
 				directions: payload.directions,
 				...(cookingInputsChanged ? { cookModeJson: null, cookModeGeneratedAt: null } : {}),
 				...(translationInputsChanged
@@ -133,12 +148,9 @@ export const actions: Actions = {
 				// A manual save IS the human review — clear any import review flag.
 				needsReview: false,
 				reviewReason: null,
-				updatedAt: new Date()
-			})
-			.where(eq(recipes.slug, params.slug))
-			.returning({ id: recipes.id })
-			.all();
-		if (updated.length === 0) return fail(404, { error: 'Recipe not found' });
+			}
+		});
+		if (!updated) return fail(409, { error: 'This recipe changed while you were editing it. Reload and try again.' });
 
 		// Start the rewrite now; the recipe page the redirect lands on joins
 		// this same in-flight generation instead of starting its own.

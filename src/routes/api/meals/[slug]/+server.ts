@@ -8,6 +8,7 @@ import { db } from '$lib/server/db/index';
 import { recipes } from '$lib/server/db/schema';
 import { kickCookModeGeneration } from '$lib/server/ai/cook_mode';
 import { readJsonBody } from '$lib/server/api_body';
+import { updateCanonicalRecipe } from '$lib/server/recipe_mutations';
 import {
 	addSubRecipe,
 	removeSubRecipe,
@@ -27,32 +28,47 @@ const PatchSchema = z
 export const PATCH: RequestHandler = async ({ locals, params, request }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
 
-	const meal = db.select({ id: recipes.id }).from(recipes).where(eq(recipes.slug, params.slug)).get();
-	if (!meal) throw error(404, 'Recipe not found');
-
 	const body = await readJsonBody(request, PatchSchema);
-
 	const targetSlug = body.add_slug ?? body.remove_slug!;
-	const target = db.select({ id: recipes.id }).from(recipes).where(eq(recipes.slug, targetSlug)).get();
-	if (!target) throw error(404, 'Sub-recipe not found');
 
+	let mealId: number;
+	let changed: boolean;
 	try {
-		if (body.add_slug) addSubRecipe(db, meal.id, target.id);
-		else removeSubRecipe(db, meal.id, target.id);
+		({ mealId, changed } = db.transaction((tx) => {
+			const meal = tx
+				.select({ id: recipes.id, contentRevision: recipes.contentRevision })
+				.from(recipes)
+				.where(eq(recipes.slug, params.slug))
+				.get();
+			if (!meal) throw error(404, 'Recipe not found');
+			const target = tx
+				.select({ id: recipes.id })
+				.from(recipes)
+				.where(eq(recipes.slug, targetSlug))
+				.get();
+			if (!target) throw error(404, 'Sub-recipe not found');
+
+			const linkChanged = body.add_slug
+				? addSubRecipe(tx, meal.id, target.id)
+				: removeSubRecipe(tx, meal.id, target.id);
+			if (linkChanged) {
+				const updated = updateCanonicalRecipe(tx, {
+					recipeId: meal.id,
+					expectedRevision: meal.contentRevision,
+					changes: { cookModeJson: null, cookModeGeneratedAt: null }
+				});
+				if (!updated) throw error(409, 'Recipe changed during the edit');
+			}
+			return { mealId: meal.id, changed: linkChanged };
+		}));
 	} catch (e) {
 		if (e instanceof MealCompositionError) throw error(422, e.message);
 		throw e;
 	}
 
-	// Composition changes invalidate the meal's combined bench sheet. Clearing
-	// the cache is what actually invalidates — generateCookMode's staleness
-	// check only compares sub-recipe updatedAt, not the meal's own. Then
-	// pre-generate so the sheet is ready by the next open.
-	db.update(recipes)
-		.set({ updatedAt: new Date(), cookModeJson: null, cookModeGeneratedAt: null })
-		.where(eq(recipes.id, meal.id))
-		.run();
-	kickCookModeGeneration(params.slug);
+	// Composition changes invalidate the meal's combined bench sheet. The
+	// canonical mutation above clears it and advances the recipe revision.
+	if (changed) kickCookModeGeneration(params.slug);
 
-	return json({ subRecipes: subRecipesOf(db, meal.id) });
+	return json({ subRecipes: subRecipesOf(db, mealId) });
 };

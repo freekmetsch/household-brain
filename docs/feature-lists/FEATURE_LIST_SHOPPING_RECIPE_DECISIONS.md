@@ -1,5 +1,5 @@
 # Feature List: Shopping and Recipe Decisions
-_Status: Plan ready - 2026-07-22 (awaiting /run)_
+_Status: In flight - Phase 1 of 5 (paused 2026-07-22)_
 
 ## Problem framing
 
@@ -220,6 +220,8 @@ Exit: one cost-free test pack and both rollback drills prove the full path; Free
 - **Risk:** R3 compatibility gate. **Impact / effort / confidence:** 5 / M / high.
 - **Verification:** seed future-shaped ingredient JSON, load and save through every writer, prove IDs/origin remain; live client/model schemas reject supplied `ai_accepted`; validated full-backup restore preserves it; two canonical writes in one second get distinct revisions; cache/image/log-only writes do not increment the revision.
 - **Rollback:** ordinary code rollback is safe because this ticket emits no IDs or new origin values and performs no JSON backfill.
+- **Release A result (2026-07-22):** complete. Migration `0019` adds only `content_revision`; stored, live-edit, new/model, and trusted-restore schemas are separate; canonical writers use one revision-checked update seam; meal-link writes share its transaction; Release A rejects new or duplicate ingredient IDs and cannot mint `ai_accepted`.
+- **Release A proof:** 42 unit files / 302 tests, Svelte check, production build, and local browser smoke pass. The rollback fixture proves ingredient JSON stays byte-for-byte unchanged and a pre-Release-A writer can update a migrated row. Independent review found three P1 gaps in the first draft; all were fixed and the follow-up review cleared them. Gate B remains closed and no `0020` migration, ID backfill, shopping table, production snapshot, or live-data write has started.
 
 ### SRD-1A - Backfill stable ingredient IDs
 
@@ -502,24 +504,24 @@ Overall risk: **R3**. The migration is additive, but it backfills IDs inside rec
 
 The strongest objection is that stable IDs, source-rich expansion, two tables, and a proposal type are too much structure for a household app, especially after adding portion and cooking polish. A smaller UI patch would ship faster. It would keep the bugs that make the screen hard to trust: a name-keyed choice cannot say which recipe it changes, flat ingredients cannot stay separate while cooking and sum once for buying, and a plain confirmation cannot review additions with different need states. The new cooking work does not add another persistent model: portion presets store the existing absolute count, component groups project existing fields, blended colors stay display-only, and v4 AI output remains unchanged. The chosen plan adds identity only where durable shopping choices need it and keeps the new recording scope in code-owned projections.
 
-## Open Questions
+## Decisions
 
-> **Q: What should the recurring tab be called?** - Default: `Every week` (`Elke week`). Reason: it says when the item appears and avoids confusing it with pantry stock.
+> **Recurring tab:** `Every week` (`Elke week`). It says when the item appears and avoids confusing it with pantry stock.
 
-> **Q: Should choosing an alternative on the shopping page change the recipe immediately?** - Default: keep `This week` as the first action and offer a separate `Use in recipe` action. Reason: a weekly stock or price choice should not silently rewrite future cooks.
+> **Weekly alternatives:** keep `This week` as the first action and offer a separate `Use in recipe` action. A weekly stock or price choice must not silently rewrite future cooks.
 
-> **Q: How should AI additions start in the review sheet?** - Default: selected as `Nice to have`, with `Every time` and `Usually stocked` available before Apply. Reason: AI output stays non-required until a human names the stronger need.
+> **AI additions:** start as `Nice to have`, with `Every time` and `Usually stocked` available before Apply. AI output stays non-required until a human names the stronger need.
 
 ## Resume pack
 
 Goal: add source-aware shopping decisions, weekly buys, manual recipe enhancement, whole-batch planning, component-aware ingredients, deterministic cook colors/call ownership, complete ingredient translation, and denser recipe cards.
 
-Current state: plan ready at R3 across five phases and twenty-one execution tickets. The Dutch recording is transcribed, its four requirements are mapped to source evidence and tickets, and two critique rounds have been integrated; application code is unchanged.
+Current state: Release A / SRD-0 is shipped and rollback-compatible. The app accepts future ingredient IDs and trusted provenance without creating either, preserves unknown ingredient and substitute fields, and uses monotonic recipe revisions; Gate B remains closed.
 
-First command: `/run`.
+First command: `/run` only after explicit approval to prepare Gate B evidence on database copies; do not touch the live database.
 
 First files: `src/lib/recipe_ingredient.ts`, `src/lib/server/db/schema.ts`, next append-only Drizzle migration, `src/lib/server/meal_recipes.ts`, `src/lib/server/shopping_needs.ts`.
 
-Pending verification: Gate A approval through `/run`, SRD-0 compatibility deploy, migration copy/dual-rollback drill during SRD-1A–SRD-1C, then gated phase-by-phase tests and browser proof.
+Pending verification: prepare the pre-`0020` and current database copies, dry-run ID and legacy-override mapping, record semantic counts and snapshot paths, and rehearse both rollback paths before asking for Gate B. No live migration is authorized.
 
-Open defaults: `Every week`; weekly alternatives do not rewrite recipes unless `Use in recipe` is chosen; AI additions start as `Nice to have`.
+Decisions fixed: `Every week`; weekly alternatives do not rewrite recipes unless `Use in recipe` is chosen; AI additions start as `Nice to have`.

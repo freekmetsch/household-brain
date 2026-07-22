@@ -17,7 +17,7 @@ import { kickTranslateOnImport } from '$lib/server/ai/translate_recipe';
 import { getAutoTranslateOnImport, getCookModePreGeneration } from '$lib/server/recipes/prefs';
 import { normalizeFoodCategory } from '$lib/food_categories';
 import { z } from 'zod';
-import { IngredientArraySchema } from '$lib/recipe_ingredient';
+import { NewIngredientArraySchema } from '$lib/recipe_ingredient';
 import { getBackgroundModel } from '$lib/server/ai/config';
 
 type DB = BetterSQLite3Database<typeof schema>;
@@ -39,6 +39,7 @@ export type ScrapedRecipe = {
 	rawIngredients: string[];
 	structureVersion: 1 | 2;
 	structureDraft: Ingredient[] | null;
+	ingredientSourceIndexes?: Array<number | null>;
 	enrichmentReviewReason: string | null;
 };
 
@@ -257,6 +258,7 @@ const EnrichmentSchema = z.object({
 export type ValidatedEnrichment = {
 	confidence: 'high' | 'low';
 	ingredients: Ingredient[];
+	sourceIndexes: Array<number | null>;
 	reviewReason: string | null;
 };
 
@@ -283,10 +285,15 @@ export function validateRecipeEnrichment(raw: unknown, sourceCount: number): Val
 		}
 	}
 
-	const ingredients = IngredientArraySchema.parse(
+	const ingredients = NewIngredientArraySchema.parse(
 		parsed.ingredients.map(({ sourceIndex: _sourceIndex, ...ingredient }) => ingredient)
 	);
-	return { confidence: parsed.confidence, ingredients, reviewReason: parsed.reviewReason };
+	return {
+		confidence: parsed.confidence,
+		ingredients,
+		sourceIndexes: parsed.ingredients.map((ingredient) => ingredient.sourceIndex),
+		reviewReason: parsed.reviewReason
+	};
 }
 
 export async function enrichRecipeStructure(data: ScrapedRecipe): Promise<ScrapedRecipe> {
@@ -316,6 +323,7 @@ export async function enrichRecipeStructure(data: ScrapedRecipe): Promise<Scrape
 			return {
 				...data,
 				structureDraft: enriched.ingredients,
+				ingredientSourceIndexes: enriched.sourceIndexes,
 				structureVersion: 1,
 				enrichmentReviewReason: enriched.reviewReason ?? 'Check the proposed ingredient structure before applying it.'
 			};
@@ -323,6 +331,7 @@ export async function enrichRecipeStructure(data: ScrapedRecipe): Promise<Scrape
 		return {
 			...data,
 			ingredients: enriched.ingredients,
+			ingredientSourceIndexes: enriched.sourceIndexes,
 			structureDraft: null,
 			structureVersion: 2,
 			enrichmentReviewReason: null

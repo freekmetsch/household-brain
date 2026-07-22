@@ -17,8 +17,9 @@ import { kickCookModeGeneration } from '$lib/server/ai/cook_mode';
 import { kickTranslateOnImport } from '$lib/server/ai/translate_recipe';
 import { getAutoTranslateOnImport, getCookModePreGeneration } from '$lib/server/recipes/prefs';
 import { db as appDb } from '$lib/server/db/index';
+import { updateCanonicalRecipe, type CanonicalRecipeUpdate } from '$lib/server/recipe_mutations';
 import type { DB, ExecutorFn } from './shared';
-import { IngredientSchema } from '$lib/recipe_ingredient';
+import { NewIngredientSchema } from '$lib/recipe_ingredient';
 
 // Pre-generate a bench sheet after a chat-side recipe write, so the recipe is
 // ready by the time it's opened. generateCookMode reads the module-level app
@@ -147,7 +148,7 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 				category: z.string().optional(),
 				servings: z.number().optional(),
 				total_time_min: z.number().optional(),
-				ingredients: z.array(IngredientSchema),
+				ingredients: z.array(NewIngredientSchema),
 				directions: z.array(z.string()),
 				notes: z.string().optional(),
 				source_url: z.string().optional(),
@@ -219,7 +220,7 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 			.object({
 				slug: z.string(),
 				servings: z.number().optional(),
-				add_ingredients: z.array(IngredientSchema).optional(),
+				add_ingredients: z.array(NewIngredientSchema).optional(),
 				remove_ingredient_names: z.array(z.string()).optional(),
 				set_ingredient_roles: z
 					.array(z.object({ name: z.string(), role: z.enum(['cook_in', 'serve_fresh']) }))
@@ -298,8 +299,7 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 			}
 		}
 
-		const updates: Record<string, unknown> = {
-			updatedAt: new Date(),
+		const updates: CanonicalRecipeUpdate = {
 			ingredients,
 			structureVersion: ingredientStructureVersion(ingredients)
 		};
@@ -347,7 +347,12 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 			updates.translatedAt = null;
 		}
 
-		db.update(schema.recipes).set(updates).where(eq(schema.recipes.slug, input.slug)).run();
+		const updated = updateCanonicalRecipe(db, {
+			recipeId: recipe.id,
+			expectedRevision: recipe.contentRevision,
+			changes: updates
+		});
+		if (!updated) return { ok: false, error: 'Recipe changed during the edit' };
 		if (sheetStale) kickCookModeIfAppDb(db, input.slug);
 		return {
 			ok: true,
