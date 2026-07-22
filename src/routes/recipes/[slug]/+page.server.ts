@@ -30,7 +30,7 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 		return { weekStartDate, weekNumber: isoWeekNumber(weekStartDate) };
 	});
 
-	// AH-INVARIANT: stock match + the serve-fresh list use Dutch ingredient names
+	// AH-INVARIANT: stock matching uses Dutch ingredient names
 	// (recipe.ingredients), never the English cache.
 	const stockRows = db
 		.select({ name: inventoryItems.name })
@@ -42,9 +42,7 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const ingredientStock: boolean[] = ings.map((ing) => stockNames.some((n) => namesMatch(ing.name, n)));
 
 	// Meal Recipe composition (ADR 0003): sub-recipes for the Combines section
-	// and freeze attribution; parent meals for the "Part of" line. serveFresh
-	// runs over the EXPANDED ingredient set (via serveFreshForRecipe) so a
-	// planned meal completes fresh items for every component.
+	// and freeze attribution; parent meals for the "Part of" line.
 	const subRecipes = subRecipesOf(db, recipe.id);
 	const partOfMeals = mealsContaining(db, recipe.id);
 

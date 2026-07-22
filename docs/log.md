@@ -41,3 +41,12 @@ Touched: docs/artifacts/2026-07-22-plan-shopping-recipe-decisions.html
 
 ## 2026-07-22 17:24 | html-artifact | decision: shopping-recipe-decisions Gate C
 Touched: docs/artifacts/2026-07-22-plan-shopping-recipe-decisions.html
+
+## 2026-07-22 20:04 | html-artifact | archive: shopping-recipe-decisions
+Touched: docs/artifacts/archive/2026-07-22-plan-shopping-recipe-decisions.html
+
+## 2026-07-22 20:04 | archive-scan | 1 feature list, 1 HTML archived
+Touched: docs/archive/2026-07/FEATURE_LIST_SHOPPING_RECIPE_DECISIONS.md
+
+## 2026-07-22 | shipped | shopping and recipe decisions
+Implemented SRD-0 through SRD-17. Reviewed all 14 old shopping rows without guessing, kept their audit records, removed the retired shopping writers, and moved the screen and chat tool onto one source-owned shopping view.

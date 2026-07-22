@@ -1,5 +1,5 @@
 # Feature List: Shopping and Recipe Decisions
-_Status: In flight - Phase 4 of 5 (Release C ready; Gate D closed)_
+_Status: Shipped - 2026-07-22_
 
 ## Problem framing
 
@@ -338,7 +338,7 @@ The Release B candidate implements SRD-1A through SRD-4B behind the old shopping
 - The fresh code rollback passed: Release A at `74b7f13` logged in, saved `adam-ragusea-bolognese`, advanced its revision, and preserved all 20 ingredient IDs and the note edit on the post-migration copy.
 - The fresh full rollback passed: the pre-Release-A image at `907ba22` returned healthy against the fresh pre-`0020` snapshot copy.
 - The production service is online on Release B. Its health endpoint and read-only shopping initializer return 200; the final live counts remain 8 recipes, 115 ingredient IDs, 75 overrides, 106 week entries, and 14 unresolved rows.
-- Gate C was approved by Freek on 2026-07-22 for SRD-5 through SRD-16, including the reviewed SRD-6 recipe mutation. SRD-17 cleanup remains closed behind Gate D.
+- Gate C was approved by Freek on 2026-07-22 for SRD-5 through SRD-16, including the reviewed SRD-6 recipe mutation. At this point, SRD-17 still remained closed behind Gate D.
 
 ### Release C result
 
@@ -347,7 +347,16 @@ The Release B candidate implements SRD-1A through SRD-4B behind the old shopping
 - Local production-build browser checks pass against a temporary database copy at 375, 768, and 1280 px in English and Dutch with no horizontal overflow or browser errors. The meal-plan `x2` control changed 4 servings to 8 through the real server action.
 - Both rollback paths pass against journal-valid fresh fixtures: Release A saves a migrated recipe while preserving ingredient IDs, and the pre-SRD-0 image starts against the full pre-`0020` restore.
 - Startup now repairs only the two columns omitted by the early draft of migration `0020`, and only when that exact partial table shape exists. The repair is idempotent and preserves rows; fresh and pre-`0020` databases remain unchanged.
-- Gate D remains closed. The 14 live unresolved legacy rows must be attached, converted, dismissed, or named in an approved exception list before SRD-17. Evidence is in `output/gate-c-evidence.md`.
+- Release C at `c0cf8f0` was verified on the deployed Railway app. Evidence is in `output/gate-c-evidence.md`.
+
+### Gate D and Release D result
+
+- A pre-review live snapshot was saved at `/data/snapshots/gate-d-pre-resolve-20260722T173707Z.db`; it matched the source database at 106 week entries and 14 unresolved legacy rows.
+- Every legacy row received a reviewed audit outcome without guessing. Twelve old rows had no live candidate. `bloem` and `suiker` each matched several same-recipe contributions with different amounts, while the old aggregate rows had no amount that could identify one source. All 14 were dismissed and retained as audit rows; zero unresolved active rows remain.
+- A narrow follow-up at `4bf40b6` allowed audit dismissal of past legacy rows while keeping past attach, manual conversion, and all normal past-week writes blocked. The deployed UI resolved 12 rows. A guarded maintenance write resolved the two old Monday-keyed rows that the Wednesday household week boundary could not display, after exact ID, field, state, and revision checks.
+- Freek's instruction to finish the full feature list approved Gate D and SRD-17 once the live blocker reached zero.
+- SRD-17 removed the retired name-keyed shopping writers, duplicate chat projection, blocked serve-fresh writer route, compatibility helper and test, and dead copy. The chat tool now reads the same source-owned week view as the screen. Exact normalized inventory matching prevents `rijstazijn` from hiding `rijst`.
+- Historical override data, import/export support, the no-guess upgrade importer, legacy review, and append-only migrations remain. The final 54 test files / 362 tests, Svelte check, production build, independent review, deployment smoke, and archive evidence close Release D.
 
 ### SRD-5 - Rebuild the shopping screen around three tabs
 
@@ -471,6 +480,8 @@ The Release B candidate implements SRD-1A through SRD-4B behind the old shopping
 
 ### SRD-17 - Remove compatibility code and close the plan
 
+_Completed 2026-07-22._
+
 - **Observable behavior:** after parity and rollback proof, no legacy writable owner, old optional/staple list, obsolete time/filter copy, or duplicate projection remains; the shipped plan and artifact move to the archive lane.
 - **Scope in:** delete old shopping override write/projection code, remove spent compatibility adapters and dead copy/helpers, final targeted tests/build/browser smoke, append work log, archive feature list and HTML artifact.
 - **Scope out:** deleting the historical `shopping_list_overrides` table or read-only data it contains; append-only migrations remain untouched.
@@ -572,12 +583,12 @@ The strongest objection is that stable IDs, source-rich expansion, two tables, a
 
 Goal: add source-aware shopping decisions, weekly buys, manual recipe enhancement, whole-batch planning, component-aware ingredients, deterministic cook colors/call ownership, complete ingredient translation, and denser recipe cards.
 
-Current state: Release C / SRD-5 through SRD-16 is complete. The full test, build, browser, tamper, call-boundary, migration, and rollback checks pass; Gate D remains closed.
+Current state: Release D / SRD-0 through SRD-17 is complete. Gate D passed with a pre-write snapshot, reviewed outcomes for all 14 live legacy rows, zero unresolved rows, and no exceptions.
 
-First command: resolve the 14 live legacy rows through the new shopping review sheet, then present Gate D evidence. Do not run SRD-17 without explicit Gate D approval.
+First command: none. Start future work from a new feature list.
 
-First files: `output/gate-c-evidence.md`, this feature list, and the live shopping legacy-review sheet.
+First files: `output/gate-c-evidence.md` and this archived feature list.
 
-Pending verification: zero unresolved active live legacy rows or a named, user-approved exception list. SRD-17 compatibility cleanup and archival stay blocked.
+Pending verification: none.
 
 Decisions fixed: `Every week`; weekly alternatives do not rewrite recipes unless `Use in recipe` is chosen; AI additions start as `Nice to have`.

@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { and, eq, gte, isNull, lt } from 'drizzle-orm';
+import { and, gte, lt } from 'drizzle-orm';
 import * as schema from '$lib/server/db/schema';
-import { normalizeNameKey } from '$lib/match';
 import { deriveWeekNeeds } from '$lib/server/shopping_needs';
+import { initializeShoppingSourceData, materializeShoppingWeek } from '$lib/server/shopping_entries';
+import { getShoppingWeekView } from '$lib/server/shopping_view';
 import { getWeekStartDay } from '$lib/server/meal_plan/prefs';
 import { todayIso, weekKeyRange, weekStartFor } from '$lib/week';
 import { isoDateSchema } from '$lib/date_schema';
@@ -13,7 +14,8 @@ export const shoppingExecutors: Record<string, ExecutorFn> = {
 		const input = z.object({ week_start_date: isoDateSchema.optional() }).parse(raw);
 		// Household planning-week boundary + range query, mirroring the shopping
 		// page load: meals keyed under an older week-start convention still count.
-		const weekStart = weekStartFor(input.week_start_date ?? todayIso(), getWeekStartDay(db));
+		const weekStartDay = getWeekStartDay(db);
+		const weekStart = weekStartFor(input.week_start_date ?? todayIso(), weekStartDay);
 		const keyRange = weekKeyRange(weekStart);
 
 		const meals = db
@@ -32,38 +34,25 @@ export const shoppingExecutors: Record<string, ExecutorFn> = {
 		// sides, and role-less freezer recipes are reported instead of guessed.
 		const needs = deriveWeekNeeds(db, meals);
 
-		const inventory = db
-			.select({ name: schema.inventoryItems.name, isStaple: schema.inventoryItems.isStaple })
-			.from(schema.inventoryItems)
-			.where(isNull(schema.inventoryItems.deletedAt))
-			.all();
-
-		// Exclude anything already in stock, matched on the canonical Dutch name key
-		// (not fuzzy substring — avoids "rijst" masking "rijstazijn"). Pantry staples
-		// live in inventory, so this drops them too.
-		const stockKeys = new Set(inventory.map((inv) => normalizeNameKey(inv.name)));
-		const stapleKeys = new Set(inventory.filter((inv) => inv.isStaple).map((inv) => normalizeNameKey(inv.name)));
-		const overrides = db.select().from(schema.shoppingListOverrides)
-			.where(eq(schema.shoppingListOverrides.weekStartDate, weekStart)).all();
-		const overrideByName = new Map(overrides.map((row) => [normalizeNameKey(row.name), row]));
-		const missing = needs.needed
-			.map((need) => {
-				const key = normalizeNameKey(need.name);
-				const override = overrideByName.get(key);
-				const included = override?.included ?? (!need.optional && !stapleKeys.has(key));
-				const name = override?.selectedName ?? need.name;
-				const forceMissing = stapleKeys.has(key) && override?.included === true;
-				return { need, included, name, forceMissing };
-			})
-			.filter(({ included, name, forceMissing }) => included && (forceMissing || !stockKeys.has(normalizeNameKey(name))))
-			.map(({ need, name }) => ({
-				source_name: need.name,
-				name,
-				amount: need.amount,
-				unit: need.unit ?? null,
-				for_meals: need.forMeals,
-				fresh_side_for_freezer_meal: need.freshSideOnly,
-				incompatible_quantities: need.incompatibleQuantities
+		initializeShoppingSourceData(db);
+		materializeShoppingWeek(db, weekStart, { weekStartDay });
+		const shopping = getShoppingWeekView(db, weekStart);
+		const freshSideSourceKeys = new Set<string>(
+			needs.needed.flatMap((need) =>
+				need.freshSideOnly ? need.sources.map((source) => source.ref.key) : []
+			)
+		);
+		const missing = shopping.toBuy
+			.filter((row) => !row.covered)
+			.map((row) => ({
+				source_name: row.sources[0]?.name ?? row.name,
+				name: row.name,
+				amount: row.amount,
+				unit: row.unit,
+				for_meals: [...new Set(row.sources.flatMap((source) => source.mealNames))],
+				fresh_side_for_freezer_meal:
+					row.sources.length > 0 && row.sources.every((source) => freshSideSourceKeys.has(source.sourceKey)),
+				incompatible_quantities: row.incompatibleQuantities
 			}));
 
 		const freezerNote = needs.freezerMealsMissingFreshInfo.length

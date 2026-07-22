@@ -7,13 +7,14 @@ import * as schema from '$lib/server/db/schema';
 import type { Ingredient } from '$lib/server/db/schema';
 import { createTestDb, type TestDb } from '$lib/server/test_db';
 import { addInventory } from '$lib/server/inventory_writes';
+import { updateShoppingEntry } from '$lib/server/shopping_mutations';
 import { todayIso, weekStartFor } from '$lib/week';
 import { executeToolCall } from './index';
 import type { TurnExecutionContext } from '../commit_risk';
 
 const turnCtx = (): TurnExecutionContext => ({ createdThisTurn: new Set(), destructiveCount: 0 });
 
-const WEEK = '2026-07-06'; // a Monday
+const WEEK = weekStartFor(todayIso(), 2);
 
 type ShoppingResult = {
 	week: string;
@@ -113,6 +114,48 @@ describe('generate_shopping_list', () => {
 		expect(res.shopping_list.map((i) => ({ name: i.name, amount: i.amount }))).toEqual([
 			{ name: 'Rijst', amount: '300' }
 		]);
+	});
+
+	it('uses source-owned choices and ignores retired override rows', async () => {
+		const db = createTestDb();
+		seedRecipe(db, 'rijstkeuze', [
+			{ name: 'Rijst', amount: '200', unit: 'g', substitutes: [{ name: 'Basmati' }] }
+		]);
+		await planMeal(db, 'Rijstkeuze', 'rijstkeuze');
+		await executeToolCall(
+			'generate_shopping_list',
+			{ week_start_date: WEEK },
+			db,
+			1,
+			turnCtx()
+		);
+
+		const entry = db.select().from(schema.shoppingWeekEntries).get()!;
+		updateShoppingEntry(db, {
+			entryId: entry.id,
+			expectedRevision: entry.revision,
+			selectedName: 'Basmati',
+			weekStartDay: 2
+		});
+		db.insert(schema.shoppingListOverrides)
+			.values({
+				weekStartDate: WEEK,
+				name: 'Rijst',
+				selectedName: 'Verouderde keuze',
+				included: false,
+				createdAt: new Date()
+			})
+			.run();
+
+		const res = (await executeToolCall(
+			'generate_shopping_list',
+			{ week_start_date: WEEK },
+			db,
+			1,
+			turnCtx()
+		)) as ShoppingResult;
+
+		expect(res.shopping_list.map((item) => item.name)).toEqual(['Basmati']);
 	});
 
 	it('freezer-planned meals only contribute their serve_fresh sides', async () => {

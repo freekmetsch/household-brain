@@ -1,11 +1,15 @@
 import { and, asc, eq, inArray, isNull, lte, or, gte } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { namesMatch, normalizeNameKey } from '$lib/match';
+import { normalizeNameKey, tokenize } from '$lib/match';
 import { sumCompatibleQuantities } from '$lib/recipe_scale';
 import * as schema from '$lib/server/db/schema';
 
 type DB = BetterSQLite3Database<typeof schema>;
 type WeekEntry = typeof schema.shoppingWeekEntries.$inferSelect;
+
+function inventoryMatchKey(name: string): string {
+	return [...new Set(tokenize(name))].sort().join('\u0000');
+}
 
 export type ShoppingSourceView = {
 	id: number;
@@ -87,6 +91,7 @@ function effectiveAmount(entry: WeekEntry): { amount: string | null; unit: strin
 
 function aggregateRows(sources: ShoppingSourceView[], inventoryNames: string[]): ShoppingBuyRow[] {
 	const rows: ShoppingBuyRow[] = [];
+	const inventoryKeys = new Set(inventoryNames.map(inventoryMatchKey).filter(Boolean));
 	for (const source of sources.filter((entry) => entry.included && !entry.needsReview)) {
 		const termKey = normalizeNameKey(source.term);
 		const candidates = rows.filter((row) => normalizeNameKey(row.name) === termKey);
@@ -104,7 +109,7 @@ function aggregateRows(sources: ShoppingSourceView[], inventoryNames: string[]):
 				amount: source.amount,
 				unit: source.unit,
 				bought: source.bought,
-				covered: inventoryNames.some((name) => namesMatch(source.term, name)),
+				covered: inventoryKeys.has(inventoryMatchKey(source.term)),
 				entryIds: [source.id],
 				sources: [source],
 				incompatibleQuantities: candidates.length > 0

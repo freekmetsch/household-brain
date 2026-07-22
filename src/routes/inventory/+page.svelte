@@ -404,7 +404,7 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					action: 'add_manual',
+					action: 'add_source_manual',
 					weekStart: data.currentWeekStart,
 					name: item.name,
 					amount: null,

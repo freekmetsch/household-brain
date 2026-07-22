@@ -48,4 +48,21 @@ describe('shopping week projection', () => {
 		expect(view.done).toHaveLength(0);
 		expect(view.toBuy[0]).toMatchObject({ amount: '2', unit: 'l', bought: false });
 	});
+
+	it('matches stock after removing descriptors but not by compound substring', () => {
+		const db = createTestDb();
+		const now = new Date();
+		db.insert(schema.shoppingWeekEntries).values([
+			{ weekStartDate: WEEK, sourceKey: 'manual:1', sourceKind: 'manual', name: 'rode ui', approvedTerms: ['rode ui'], mealIds: [], createdAt: now, updatedAt: now },
+			{ weekStartDate: WEEK, sourceKey: 'manual:2', sourceKind: 'manual', name: 'rijst', approvedTerms: ['rijst'], mealIds: [], createdAt: now, updatedAt: now }
+		]).run();
+		db.insert(schema.inventoryItems).values([
+			{ name: 'ui', section: 'pantry', createdAt: now, updatedAt: now },
+			{ name: 'rijstazijn', section: 'pantry', createdAt: now, updatedAt: now }
+		]).run();
+
+		const view = getShoppingWeekView(db, WEEK);
+		expect(view.toBuy.find((row) => row.name === 'rode ui')?.covered).toBe(true);
+		expect(view.toBuy.find((row) => row.name === 'rijst')?.covered).toBe(false);
+	});
 });

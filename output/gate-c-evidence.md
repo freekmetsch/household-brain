@@ -1,14 +1,14 @@
-# Gate D evidence pack
+# Gate D and Release D evidence pack
 
-_Release C candidate, 2026-07-22. Gate D remains closed._
+_Release C verified and Gate D passed, 2026-07-22._
 
 ## Scope
 
-SRD-5 through SRD-16 are complete. SRD-17 compatibility deletion and archival were not started.
+Release C at `c0cf8f0` was live on Railway before the Gate D review. Freek then authorized completion of the full feature list, including SRD-17, after the live legacy rows had a reviewed outcome.
 
 ## Automated proof
 
-- 55 unit-test files and 361 tests pass.
+- 54 unit-test files and 362 tests pass after deleting the spent compatibility test file and adding source-view regressions.
 - Svelte check passes with no errors or warnings.
 - The production build passes.
 - The migration rehearsal passes on a copy of the current database and a Release A fixture. The fixture import assigns four stable ingredient IDs, preserves every old ingredient field and its order, imports three legacy rows without fan-out or loss, and makes the second import a no-op.
@@ -41,6 +41,23 @@ The locally served production build passed against a temporary database copy at 
 - The rehearsal now records Drizzle journal entries in synthetic fixtures. Historical images therefore test the intended migration state instead of replaying migration `0000` over existing tables.
 - A copied early-draft `0020` database exposed missing `amount_override` and `unit_override` columns. Startup repairs only that exact partial shape. Unit tests prove row preservation, idempotence, and no change to fresh or pre-`0020` databases.
 
-## Gate D blocker
+## Live legacy review
 
-Release B reported 14 unresolved active legacy rows in production. They remain blocked from AH. Each row must be attached to one live source, converted to a manual item, dismissed with its audit record, or named in a user-approved exception list before Gate D can open.
+Before any review write, the live database was copied to `/data/snapshots/gate-d-pre-resolve-20260722T173707Z.db`. The snapshot contained the same 106 shopping entries and 14 unresolved legacy rows as the source database.
+
+All 14 rows were dismissed with an audit record. No row was attached or converted because the live data did not support either choice without guessing:
+
+- The 12 rows from the old 2026-07-13 and 2026-07-15 planning weeks had no live source candidate: `snoeptomaatjes`, `milde olijfolie`, `r pandan rijst (gekookt en afgekoeld)`, `zonnebloemolie`, `peper en zout`, `r fijngesneden prei`, `scheut ketjap`, `r champignons`, `theelepel sambal`, `Snuf komijn`, `Snuf djahe (gember)`, and `Snuf kurkuma`.
+- The two rows in the completed current delivery cycle were ambiguous aggregates. `bloem` matched two contributions from one recipe with different amounts; `suiker` matched three. The old rows had no amount that could identify one contribution.
+
+Twelve rows were reviewed through the deployed shopping screen. The old Monday-keyed 2026-07-13 week normalizes to the household's Wednesday week boundary, so its two rows could not render in the screen. A guarded maintenance write resolved only their exact IDs after checking every source field and revision. It changed only the same resolution, audit, retirement, and revision fields as the service dismissal.
+
+Post-state: 14 dismissed audit rows, zero unresolved active legacy rows, and no approved exception list needed. AH eligibility continues to exclude legacy rows.
+
+## SRD-17 cleanup proof
+
+- The shopping API accepts only source-owned mutations. The retired name-keyed writers and the always-blocked serve-fresh writer route are gone.
+- The chat shopping tool now reads the same source-owned weekly view as the shopping screen. A regression test proves a saved source choice wins over a stale historical override row.
+- Inventory coverage uses exact normalized Dutch names, so `rijstazijn` no longer hides `rijst` in either the screen or chat output.
+- Historical `shopping_list_overrides` data, import/export support, the no-guess upgrade importer, append-only migrations, and legacy review remain intact for self-hosted upgrades.
+- The cleanup removes more code than it adds and leaves no second writable compatibility path.

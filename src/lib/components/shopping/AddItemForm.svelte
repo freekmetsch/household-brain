@@ -1,6 +1,6 @@
 <!--
 	Manual add form — name/qty/unit inputs plus submit. Owns the field drafts
-	and the add_manual POST; on success it hands the created row to the page
+	and the source-owned manual POST; on success it hands the created row to the page
 	via `onAdded` so the page's items state stays the single source of truth.
 -->
 <script lang="ts">

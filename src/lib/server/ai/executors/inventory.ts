@@ -30,7 +30,7 @@ function inventoryForAi(item: InventoryItem) {
 // One source of truth for the updatable-item fields, shared by update_inventory_item
 // and bulk_update_inventory (bulk omits the recipe-linking fields). AH push is
 // unaffected — it sources product search from recipes.ingredients (Dutch) and
-// shopping_list_overrides, never from these inventory fields (CLAUDE.md invariant).
+// source-owned shopping entries, never from these inventory fields (CLAUDE.md invariant).
 const singleUpdateSchema = z.object({
 	id: z.number().int().positive(),
 	qty_text: z.string().optional(),

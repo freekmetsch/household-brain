@@ -1,6 +1,6 @@
 // Recipe ↔ inventory link derivation (Phase 4, ADR 0001). Read-only helpers
 // shared by the inventory page, recipe detail page, recipes list, and the
-// serve-fresh shopping push.
+// serve-fresh shopping projection.
 //
 // AH-INVARIANT: every name this module emits toward shopping/AH is the Dutch
 // `recipes.ingredients[].name`; English recipe fields (titleEn, ingredientsEn)
@@ -9,7 +9,7 @@ import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from '$lib/server/db/schema';
 import type { Ingredient } from '$lib/server/db/schema';
-import { namesMatch, titlesMatch } from '$lib/match';
+import { titlesMatch } from '$lib/match';
 import { inferFoodClassFromName, normalizeFoodClass } from '$lib/food_class';
 import { expandMealIngredients, type SubRecipeRef } from '$lib/server/meal_recipes';
 
@@ -49,8 +49,6 @@ export function frozenPortionsByRecipe(db: DB): Map<number, number> {
 	return portions;
 }
 
-export type FreshItem = { name: string; amount: string | null; unit: string | null };
-
 export type IngredientRoleCoverage = {
 	total: number;
 	classified: number;
@@ -78,41 +76,6 @@ export function expandedIngredientRoleCoverage(
 	subRecipes?: SubRecipeRef[]
 ): IngredientRoleCoverage {
 	return ingredientRoleCoverage(expandMealIngredients(db, recipe, subRecipes));
-}
-
-/**
- * Deterministic serve-fresh completion list (G8): the recipe's `serve_fresh`
- * ingredients minus what's already in stock. Names stay Dutch for AH.
- * `stockNames` is the raw Dutch inventory-item name list.
- */
-function serveFreshCompletion(
-	recipe: Pick<Recipe, 'ingredients'>,
-	stockNames: string[]
-): FreshItem[] {
-	const ings = (recipe.ingredients as Ingredient[]) ?? [];
-	return ings
-		.filter((ing) => ing.role === 'serve_fresh')
-		.filter((ing) => !stockNames.some((name) => namesMatch(ing.name, name)))
-		.map((ing) => ({ name: ing.name, amount: ing.amount ?? null, unit: ing.unit ?? null }));
-}
-
-/**
- * Serve-fresh completion for a recipe as the user actually experiences it:
- * Meal Recipes (ADR 0003) expand to their sub-recipes' ingredients first, so a
- * planned meal completes fresh items for every component, not just its own
- * extras. Single source of truth for both the recipe-page load and the
- * serve-fresh POST action.
- */
-export function serveFreshForRecipe(
-	db: DB,
-	recipe: { id: number; ingredients: unknown },
-	stockNames: string[],
-	subRecipes?: SubRecipeRef[]
-): FreshItem[] {
-	return serveFreshCompletion(
-		{ ingredients: expandMealIngredients(db, recipe, subRecipes) },
-		stockNames
-	);
 }
 
 /**
