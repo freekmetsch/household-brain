@@ -61,3 +61,4 @@ Post-state: 14 dismissed audit rows, zero unresolved active legacy rows, and no 
 - Inventory coverage uses exact normalized Dutch names, so `rijstazijn` no longer hides `rijst` in either the screen or chat output.
 - Historical `shopping_list_overrides` data, import/export support, the no-guess upgrade importer, append-only migrations, and legacy review remain intact for self-hosted upgrades.
 - The cleanup removes more code than it adds and leaves no second writable compatibility path.
+- Release D shipped at `dc142a7` in Railway deployment `42ad2c28-4052-4913-b3ce-8306ba69c873`. The running instance reports healthy, the signed-in shopping screen loads without horizontal overflow or a `Needs review` section, and a live read confirms zero unresolved active legacy rows.

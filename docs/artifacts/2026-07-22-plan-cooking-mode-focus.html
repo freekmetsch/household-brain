@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cooking Mode Focus — plan review</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f7f1e6;
+      --ink: #29251f;
+      --muted: #6e6558;
+      --line: #d8cbb8;
+      --panel: #fffdf8;
+      --red: #b94728;
+      --red-dark: #7d2d18;
+      --green: #426b4b;
+      --amber: #d89d35;
+      --shadow: 0 18px 50px rgba(56, 40, 22, .12);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 2%, rgba(216,157,53,.12), transparent 26rem),
+        linear-gradient(90deg, rgba(89,68,45,.035) 1px, transparent 1px),
+        var(--paper);
+      background-size: auto, 24px 24px, auto;
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.55;
+    }
+    button, textarea, input { font: inherit; }
+    a { color: var(--red-dark); }
+    .shell { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 34px 0 80px; }
+    .eyebrow, .kicker, .ticket, .status, .choice-label {
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(250px, .7fr);
+      gap: 24px;
+      align-items: end;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 24px;
+    }
+    .eyebrow { color: var(--red); font-size: .76rem; font-weight: 800; }
+    h1 { margin: 8px 0 12px; max-width: 12ch; font-size: clamp(2.6rem, 7vw, 5.8rem); line-height: .88; letter-spacing: -.055em; }
+    .dek { margin: 0; max-width: 64ch; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.3rem); }
+    .stamp {
+      justify-self: end;
+      width: min(100%, 290px);
+      border: 2px solid var(--red);
+      color: var(--red-dark);
+      padding: 18px;
+      transform: rotate(-1.5deg);
+      background: rgba(255,253,248,.66);
+    }
+    .stamp strong { display: block; font-size: 1.3rem; }
+    .stamp span { color: var(--muted); font-size: .92rem; }
+    .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 26px 0; background: var(--line); border: 1px solid var(--line); }
+    .fact { background: var(--panel); padding: 18px; }
+    .fact b { display: block; font-size: 1.55rem; line-height: 1; }
+    .fact span { color: var(--muted); font-size: .88rem; }
+    section { margin-top: 42px; }
+    h2 { font-size: clamp(1.65rem, 4vw, 2.8rem); line-height: 1; margin: 0 0 18px; letter-spacing: -.035em; }
+    h3 { margin: 0 0 8px; font-size: 1.18rem; }
+    p { margin: 0 0 12px; }
+    .kicker { color: var(--green); font-size: .72rem; font-weight: 800; margin-bottom: 8px; }
+    .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .phone {
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 18px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      min-height: 420px;
+    }
+    .phone.old { color: #6c645b; }
+    .phone-head { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 14px; }
+    .phone-head strong { font-size: .8rem; }
+    .progress { height: 8px; border-radius: 999px; background: #e8dfd2; overflow: hidden; }
+    .progress span { display: block; width: 29%; height: 100%; background: var(--red); }
+    .old-row { padding: 12px 4px; border-bottom: 1px solid #e6ddd0; font: 12px/1.35 Arial, sans-serif; }
+    .old-row.done { text-decoration: line-through; opacity: .48; }
+    .focus-card { margin-top: 38px; padding: 20px; border: 2px solid var(--red); border-radius: 16px; background: #fff; box-shadow: 0 10px 28px rgba(185,71,40,.13); font-family: Arial, sans-serif; }
+    .focus-card .ingredients { margin: 0 0 13px; font-size: 1rem; }
+    .focus-card .instruction { font-size: 1.12rem; line-height: 1.55; }
+    .focus-card .instruction strong { color: var(--red-dark); }
+    .focus-card .instruction u { text-underline-offset: 3px; }
+    .history { margin-top: 14px; padding: 9px 12px; border-left: 3px solid var(--green); color: var(--muted); font: 14px Arial, sans-serif; }
+    .pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; counter-reset: phase; }
+    .phase { position: relative; background: var(--panel); border-top: 4px solid var(--ink); padding: 18px; min-height: 190px; }
+    .phase::before { counter-increment: phase; content: "0" counter(phase); position: absolute; right: 14px; top: 9px; color: #cdbda6; font-size: 2rem; font-weight: bold; }
+    .phase p { color: var(--muted); font-size: .94rem; }
+    .ticket { color: var(--red); font-size: .68rem; font-weight: 800; }
+    .guardrails { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .guard { border: 1px solid var(--line); background: rgba(255,253,248,.78); padding: 16px; }
+    .guard strong { color: var(--green); }
+    .decisions { display: grid; gap: 18px; }
+    .decision { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(56,40,22,.07); padding: clamp(18px, 4vw, 28px); }
+    .decision-head { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; }
+    .status { color: var(--green); font-size: .68rem; border: 1px solid currentColor; padding: 4px 7px; }
+    .context { color: var(--muted); max-width: 78ch; }
+    .options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+    .option { position: relative; }
+    .option input { position: absolute; opacity: 0; pointer-events: none; }
+    .option label { display: block; height: 100%; border: 1px solid var(--line); padding: 14px; cursor: pointer; transition: border-color .15s ease, transform .15s ease, background .15s ease; }
+    .option label:hover { border-color: var(--red); transform: translateY(-1px); }
+    .option input:focus-visible + label { outline: 3px solid var(--amber); outline-offset: 2px; }
+    .option input:checked + label { border: 2px solid var(--red); background: #fff4ed; padding: 13px; }
+    .choice-label { display: block; color: var(--red-dark); font-size: .68rem; font-weight: 800; margin-bottom: 6px; }
+    .option small { display: block; margin-top: 7px; color: var(--muted); line-height: 1.35; }
+    textarea { width: 100%; min-height: 78px; resize: vertical; border: 1px solid var(--line); background: #fff; padding: 10px; color: var(--ink); }
+    textarea:focus { outline: 3px solid var(--amber); outline-offset: 1px; }
+    .prompt-box { background: #24211c; color: #f8f1e5; padding: 20px; border-radius: 12px; }
+    .prompt-box textarea { min-height: 330px; background: #181612; color: #f8f1e5; border-color: #514a40; font-family: ui-monospace, Consolas, monospace; font-size: .82rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .btn { border: 0; border-radius: 999px; padding: 10px 16px; cursor: pointer; font-weight: 800; }
+    .btn.primary { color: white; background: var(--red); }
+    .btn.secondary { color: var(--ink); background: #e7ddce; }
+    .btn:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+    #saveState { min-height: 1.4em; color: #d9cdbb; font-size: .85rem; margin-top: 8px; }
+    footer { margin-top: 42px; border-top: 1px solid var(--line); padding-top: 18px; color: var(--muted); font-size: .88rem; }
+    @media (max-width: 820px) {
+      header, .comparison, .guardrails { grid-template-columns: 1fr; }
+      .stamp { justify-self: start; }
+      .facts { grid-template-columns: 1fr 1fr; }
+      .pipeline { grid-template-columns: 1fr 1fr; }
+      .options { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 500px) {
+      .shell { width: min(100% - 18px, 1180px); padding-top: 20px; }
+      .facts, .pipeline { grid-template-columns: 1fr; }
+      .decision-head { grid-template-columns: 1fr; }
+      .status { justify-self: start; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <div class="eyebrow">Plan review · 22 July 2026</div>
+        <h1>Keep the cook on one step.</h1>
+        <p class="dek">A code-owned reading and focus layer for cooking mode: larger type, clear lines, visible progress, and one selected cooking step that stays in view.</p>
+      </div>
+      <div class="stamp">
+        <strong>R2 · Plan ready</strong>
+        <span>No schema. No new service. No cache-wide model calls.</span>
+      </div>
+    </header>
+
+    <div class="facts" aria-label="Plan facts">
+      <div class="fact"><b>4</b><span>phases</span></div>
+      <div class="fact"><b>8</b><span>execution tickets</span></div>
+      <div class="fact"><b>v4</b><span>cache stays valid</span></div>
+      <div class="fact"><b>0</b><span>new dependencies</span></div>
+    </div>
+
+    <section aria-labelledby="reading-title">
+      <div class="kicker">The reading problem</div>
+      <h2 id="reading-title">From a list to a working position</h2>
+      <div class="comparison">
+        <article class="phone old">
+          <div class="phone-head"><strong>Current list</strong><span>3 / 7</span></div>
+          <div class="old-row done">✓ Chop onion — fine</div>
+          <div class="old-row done">✓ Brown chicken — deep gold</div>
+          <div class="old-row">□ Add chickpeas and garam masala</div>
+          <div class="old-row">Use the stock and stir until the sauce coats the spoon. Add lime and taste before serving.</div>
+          <div class="old-row">2 tbsp garam masala · 1 can chickpeas · 1 lime</div>
+        </article>
+        <article class="phone">
+          <div class="phone-head"><strong>Step 3 of 7</strong><span>4 servings</span></div>
+          <div class="progress" aria-label="Two of seven cooking steps complete"><span></span></div>
+          <div class="history">✓ Brown chicken — deep gold</div>
+          <div class="focus-card">
+            <p class="ingredients">1 can chickpeas · 2 tbsp garam masala</p>
+            <p class="instruction"><strong>Add</strong> the <u>chickpeas</u> and <u>garam masala</u>.</p>
+            <p class="instruction">Stir until the sauce coats the spoon.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="phases-title">
+      <div class="kicker">Execution order</div>
+      <h2 id="phases-title">Keep stored meaning; change the display and state</h2>
+      <div class="pipeline">
+        <article class="phase"><span class="ticket">CMF-0</span><h3>Lock the boundary</h3><p>Prove v4 stays valid. Serving, selection, and completion make no cook-mode request; language may use the existing translation path.</p></article>
+        <article class="phase"><span class="ticket">CMF-1–2</span><h3>Make actions readable</h3><p>Lay out stored sentences without rewriting them, mark only supported goal and ingredient spans, raise type, and move ingredients first.</p></article>
+        <article class="phase"><span class="ticket">CMF-3A–3C</span><h3>Hold the current step</h3><p>Define the reducer, wire selection and completion, then add centered focus, sticky cooking-step progress, and servings.</p></article>
+        <article class="phase"><span class="ticket">CMF-4–5</span><h3>Prove the kitchen flow</h3><p>Tighten future prompts without expiring caches, then test EN/NL at phone, tablet, and desktop widths.</p></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="guards-title">
+      <div class="kicker">Fixed boundaries</div>
+      <h2 id="guards-title">What this plan refuses to duplicate</h2>
+      <div class="guardrails">
+        <div class="guard"><strong>Keep v4.</strong> Presentation work does not create a v5 cache or make valid recipes regenerate.</div>
+        <div class="guard"><strong>Keep one route.</strong> The recipe page remains the owner of timers, fallback, edit guards, and cooking completion.</div>
+        <div class="guard"><strong>Keep text safe.</strong> Typed Svelte segments replace raw HTML and loose substring marking.</div>
+        <div class="guard"><strong>Keep old prose exact.</strong> Sentence layout never rewrites words; one long cached sentence stays long.</div>
+        <div class="guard"><strong>Keep serving changes local.</strong> The current quantity projection remains instant and provider-free.</div>
+      </div>
+    </section>
+
+    <section aria-labelledby="decisions-title">
+      <div class="kicker">Three defaults to review</div>
+      <h2 id="decisions-title">Choose how focus behaves</h2>
+      <div class="decisions" id="decisionList"></div>
+    </section>
+
+    <section class="prompt-box" aria-labelledby="handoff-title">
+      <div class="kicker">Paste-ready handoff</div>
+      <h2 id="handoff-title">Your choices become the next task</h2>
+      <textarea id="generatedPrompt" readonly aria-label="Generated handoff prompt"></textarea>
+      <div class="actions">
+        <button class="btn primary" id="copyPrompt" type="button">Copy handoff</button>
+        <button class="btn secondary" id="resetChoices" type="button">Reset defaults</button>
+      </div>
+      <div id="saveState" role="status" aria-live="polite"></div>
+    </section>
+
+    <footer>
+      Authoritative source: <a href="../feature-lists/FEATURE_LIST_COOKING_MODE_FOCUS.md">FEATURE_LIST_COOKING_MODE_FOCUS.md</a>. This page stores review choices only in this browser.
+    </footer>
+  </main>
+
+  <script>
+    const ARTIFACT_PATH = 'docs/artifacts/2026-07-22-plan-cooking-mode-focus.html';
+    const SOURCE_PATH = 'docs/feature-lists/FEATURE_LIST_COOKING_MODE_FOCUS.md';
+    const STORAGE_KEY = `${ARTIFACT_PATH}:schema-v2`;
+    const decisions = [
+      {
+        id: 'surface',
+        question: 'Should the focused cooking surface stay in the recipe page or become full screen?',
+        context: 'The recording asks for progress at the top of the screen and a centered selected step. The current recipe page already owns timers, raw fallback, edit guards, and completion.',
+        recommended: 'sticky',
+        rationale: 'One in-page owner meets the focus need without duplicating timers, navigation, and error states.',
+        evidence: 'BenchSheet.svelte owns all active cook state; the 375 px proof shows the action list begins below the first viewport.',
+        uncertainty: 'A later kitchen test may show that the recipe header still distracts after the sticky rail and center-on-select behavior ship.',
+        options: [
+          { value: 'sticky', label: 'Sticky in-page rail', impact: 'Recommended. Progress and servings stay at the top while the selected action centers below them.' },
+          { value: 'fullscreen', label: 'Full-screen route', impact: 'More visual isolation, but duplicates route, timer, fallback, and return state.' },
+          { value: 'flow', label: 'In-flow progress', impact: 'Smallest change, but progress and servings scroll away during a long cook.' }
+        ]
+      },
+      {
+        id: 'completed',
+        question: 'How should completed actions remain visible?',
+        context: 'The recording rejects crossed-out instructions as the main way to show location. A cook still needs enough history to recover context or revisit a step.',
+        recommended: 'compact',
+        rationale: 'A compact checked row keeps recovery possible while giving the current action most of the visual weight.',
+        evidence: 'Current cards use line-through plus reduced opacity and keep their full height until completion hides the body and ingredients.',
+        uncertainty: 'The right compact height depends on timer and merge rows at 375 px.',
+        options: [
+          { value: 'compact', label: 'Compact checked history', impact: 'Recommended. One quiet line, no strikethrough, tap to review.' },
+          { value: 'hide', label: 'Hide completed', impact: 'Maximum focus, but weak recovery and no recent context.' },
+          { value: 'full', label: 'Keep full cards', impact: 'Maximum context, but finished work still competes with the current action.' }
+        ]
+      },
+      {
+        id: 'progress',
+        question: 'What counts toward the progress bar?',
+        context: 'Cooking mode has three check systems: ingredient reference, Get ready tasks, and cooking steps. The existing cook-completion gate uses cooking steps.',
+        recommended: 'steps',
+        rationale: 'Cooking-step progress matches the existing completion gate. Get ready keeps its own count, so the rail never hides unfinished preparation.',
+        evidence: 'BenchSheet.svelte stores preparation, ingredient, and step checks separately and derives cook completion from all cooking steps being done.',
+        uncertainty: 'A later kitchen test may support a second preparation marker, but it must remain separate from cooking-step completion.',
+        options: [
+          { value: 'steps', label: 'Cooking steps only', impact: 'Recommended. The rail and existing completion gate use the same denominator.' },
+          { value: 'prep_steps', label: 'Get ready + steps', impact: 'Shows more activity, but can make cooking completion disagree with the rail.' },
+          { value: 'everything', label: 'All checkboxes', impact: 'Looks comprehensive, but ingredient reference checks distort sequence and completion.' }
+        ]
+      }
+    ];
+
+    let state = { choices: {}, notes: {} };
+    const status = document.getElementById('saveState');
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) state = { ...state, ...JSON.parse(raw) };
+      } catch {
+        status.textContent = 'Browser storage is unavailable. Choices will last for this page only.';
+      }
+      for (const decision of decisions) if (!state.choices[decision.id]) state.choices[decision.id] = decision.recommended;
+    }
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        status.textContent = 'Choices saved in this browser.';
+      } catch {
+        status.textContent = 'Could not save. Choices still work until this page closes.';
+      }
+    }
+    function renderDecisions() {
+      const root = document.getElementById('decisionList');
+      root.innerHTML = '';
+      for (const decision of decisions) {
+        const article = document.createElement('article');
+        article.className = 'decision';
+        article.innerHTML = `
+          <div class="decision-head">
+            <div><h3>${decision.question}</h3><p class="context">${decision.context}</p></div>
+            <span class="status">Default ready</span>
+          </div>
+          <div class="options" role="radiogroup" aria-label="${decision.question}">
+            ${decision.options.map(option => `
+              <div class="option">
+                <input type="radio" id="${decision.id}-${option.value}" name="${decision.id}" value="${option.value}" ${state.choices[decision.id] === option.value ? 'checked' : ''}>
+                <label for="${decision.id}-${option.value}">
+                  <span class="choice-label">${option.value === decision.recommended ? 'Recommended' : 'Alternative'}</span>
+                  <strong>${option.label}</strong>
+                  <small>${option.impact}</small>
+                </label>
+              </div>`).join('')}
+          </div>
+          <label class="choice-label" for="note-${decision.id}">Clarification for this choice</label>
+          <textarea id="note-${decision.id}" placeholder="Optional. This text is copied verbatim into the handoff.">${state.notes[decision.id] || ''}</textarea>`;
+        root.appendChild(article);
+        article.querySelectorAll('input').forEach(input => input.addEventListener('change', event => {
+          state.choices[decision.id] = event.target.value;
+          saveState();
+          updatePrompt();
+        }));
+        article.querySelector('textarea').addEventListener('input', event => {
+          state.notes[decision.id] = event.target.value;
+          saveState();
+          updatePrompt();
+        });
+      }
+    }
+    function updatePrompt() {
+      const needsReplan = decisions.some(decision => state.choices[decision.id] !== decision.recommended);
+      const lines = [
+        needsReplan
+          ? `Revise the Cooking Mode Focus plan for the selected alternatives. Load ${SOURCE_PATH}, then /plan.`
+          : `Execute the Cooking Mode Focus plan. Load ${SOURCE_PATH}, then /run.`,
+        '',
+        needsReplan
+          ? 'State: Release D is live. One or more selected alternatives change the approved plan, so update its scope and rules before implementation.'
+          : 'State: Release D is live. This is a four-phase R2 cooking-view plan with no schema change, new dependency, or cache-wide regeneration.',
+        '',
+        'Fixed plan boundaries:',
+        '- Keep stored cook-mode v4 valid. Lay out cached sentences without rewriting words; a single long sentence stays intact.',
+        '- Bold only the validated old-cache goal cue. Underline ingredients only from valid v4 indexes; v2/v3 rows without one stay plain.',
+        '- Render typed Svelte nodes only; do not use raw HTML or fuzzy substring marking.',
+        '- Keep serving changes provider-free and keep timers, bilingual projection, fallback, and completion under BenchSheet.',
+        '- Run the full 375/768/1280 px EN/NL matrix and provider-call proof before push.',
+        '',
+        'Reviewed decisions:'
+      ];
+      if (state.choices.progress === 'steps') {
+        lines.splice(lines.indexOf('- Run the full 375/768/1280 px EN/NL matrix and provider-call proof before push.'), 0,
+          '- Count cooking steps only in the sticky rail. Keep Get ready and ingredient checks separate.');
+      }
+      for (const decision of decisions) {
+        const selected = decision.options.find(option => option.value === state.choices[decision.id]);
+        lines.push(`- Question: ${decision.question}`);
+        lines.push(`  Source: Open Questions in ${SOURCE_PATH}`);
+        lines.push(`  Selected: ${selected.label} — ${selected.impact}`);
+        lines.push(`  Recommendation: ${decision.options.find(option => option.value === decision.recommended).label}. ${decision.rationale}`);
+        lines.push(`  Evidence: ${decision.evidence}`);
+        lines.push(`  Uncertainty: ${decision.uncertainty}`);
+        lines.push(`  Options considered: ${decision.options.map(option => `${option.label} (${option.impact})`).join(' / ')}`);
+        if (state.notes[decision.id]?.trim()) lines.push(`  Freek's note, verbatim: ${state.notes[decision.id]}`);
+      }
+      lines.push('', 'Follow-up: preserve any uncommitted user files; update the known-issue record only after its live symptoms pass.');
+      document.getElementById('generatedPrompt').value = lines.join('\n');
+    }
+    async function copyPrompt() {
+      const field = document.getElementById('generatedPrompt');
+      try {
+        await navigator.clipboard.writeText(field.value);
+        status.textContent = 'Handoff copied.';
+      } catch {
+        field.focus();
+        field.select();
+        status.textContent = 'Clipboard access failed. The full handoff is selected; copy it with Ctrl+C or Command+C.';
+      }
+    }
+    function resetChoices() {
+      state = { choices: {}, notes: {} };
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+      loadState();
+      renderDecisions();
+      updatePrompt();
+      status.textContent = 'Defaults restored.';
+    }
+    loadState();
+    renderDecisions();
+    updatePrompt();
+    document.getElementById('copyPrompt').addEventListener('click', copyPrompt);
+    document.getElementById('resetChoices').addEventListener('click', resetChoices);
+  </script>
+</body>
+</html>

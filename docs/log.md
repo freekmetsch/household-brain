@@ -50,3 +50,6 @@ Touched: docs/archive/2026-07/FEATURE_LIST_SHOPPING_RECIPE_DECISIONS.md
 
 ## 2026-07-22 | shipped | shopping and recipe decisions
 Implemented SRD-0 through SRD-17. Reviewed all 14 old shopping rows without guessing, kept their audit records, removed the retired shopping writers, and moved the screen and chat tool onto one source-owned shopping view.
+
+## 2026-07-22 20:30 | html-artifact | plan: cooking-mode-focus
+Touched: docs/artifacts/2026-07-22-plan-cooking-mode-focus.html
