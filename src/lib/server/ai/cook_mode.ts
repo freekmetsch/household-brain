@@ -46,7 +46,7 @@ const StepSchema = z.object({
 
 const PrepTaskSchema = z.object({
 	text: LocalizedTextSchema,
-	ingredient_indexes: z.array(z.number().int().nonnegative())
+	ingredient_indexes: z.array(z.number().int().nonnegative()).max(1)
 });
 
 type GeneratedCookMode = Omit<LocalizedCookModeRecipeV4, 'generation_id' | 'baseline_servings'>;
@@ -226,7 +226,7 @@ export function kickCookModeGeneration(slug: string) {
 	});
 }
 
-function generationFingerprint(
+export function generationFingerprint(
 	recipe: typeof recipes.$inferSelect,
 	subRows: Array<typeof recipes.$inferSelect>
 ): string {
@@ -235,7 +235,6 @@ function generationFingerprint(
 			title: recipe.title,
 			language: recipe.language,
 			servings: recipe.servings,
-			totalTimeMin: recipe.totalTimeMin,
 			ingredients: recipe.ingredients,
 			directions: recipe.directions
 		},
@@ -244,7 +243,6 @@ function generationFingerprint(
 			title: subRecipe.title,
 			language: subRecipe.language,
 			servings: subRecipe.servings,
-			totalTimeMin: subRecipe.totalTimeMin,
 			ingredients: subRecipe.ingredients,
 			directions: subRecipe.directions
 		}))
@@ -318,14 +316,12 @@ async function generateCookModeUncached(
 		source_servings: sourceServings,
 		ingredients: baselineIngredients.map((ingredient, index) => ({ index, ...ingredient })),
 		directions: ownDirections,
-		totalTimeMin: recipe.totalTimeMin,
 		...(subRows.length > 0
 			? {
 					sub_recipes: subRows.map((subRecipe) => ({
 						title: subRecipe.title,
 						source_language: subRecipe.language,
-						directions: subRecipe.directions as string[],
-						totalTimeMin: subRecipe.totalTimeMin
+						directions: subRecipe.directions as string[]
 					}))
 				}
 			: {})

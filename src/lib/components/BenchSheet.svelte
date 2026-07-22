@@ -30,7 +30,7 @@
 	import MergeCard from './cook-mode/MergeCard.svelte';
 	import TimerStack from './cook-mode/TimerStack.svelte';
 	import FixedBottomBar from './ui/FixedBottomBar.svelte';
-	import { fmtClock, paletteFor, streamPalette, type BeatPalette } from './cook-mode/palette';
+	import { cookPaletteGraph, fmtClock, paletteFor, type BeatPalette } from './cook-mode/palette';
 	import { isStaleCookMode, localizeCookMode } from './cook-mode/staleness';
 	import RawDirectionsFallback from './RawDirectionsFallback.svelte';
 	import TimerWorker from '$lib/timer/worker?worker';
@@ -692,7 +692,7 @@
 	);
 
 	let streams = $derived(cookMode?.streams ?? []);
-	let streamPaletteMap = $derived(streamPalette(streams));
+	let paletteGraph = $derived(cookPaletteGraph(streams, steps));
 	let streamNameById = $derived(new Map(streams.map((s) => [s.id, s.name])));
 	let generatedServings = $derived(cookMode?.servings ?? (fallback.servings ?? 4));
 	let needsServingUpdate = $derived(servingDraft !== generatedServings);
@@ -724,7 +724,7 @@
 			const isMerge = (step.merges_from?.length ?? 0) >= 2;
 			const sid = step.stream_id;
 			const streamName = streamNameById.get(sid) ?? sid;
-			const palette = streamPaletteMap[sid] ?? paletteFor(0);
+			const palette = paletteGraph[i]?.result ?? paletteFor(0);
 			// Merge beats count for stream introduction too: a stream born AT a
 			// merge (wet + dry → batter) gets its divider above the merge card,
 			// not dangling after it — and absorption merges (already-seen stream)
@@ -732,9 +732,7 @@
 			const firstInStream = !seenStreams.has(sid);
 			seenStreams.add(sid);
 			if (isMerge) {
-				const mergesFromPalettes = step.merges_from
-					.map((id) => streamPaletteMap[id])
-					.filter((p): p is BeatPalette => !!p);
+				const mergesFromPalettes = paletteGraph[i]?.sources ?? [];
 				const streamNames = step.merges_from
 					.map((id) => streamNameById.get(id))
 					.filter((n): n is string => !!n);
@@ -1052,6 +1050,9 @@
 					step={beat.step}
 					mergesFromPalettes={beat.mergesFromPalettes}
 					streamNames={beat.streamNames}
+					resultPalette={beat.palette}
+					ingredientChecks={ingredientChecks}
+					onToggleIngredient={(index) => (ingredientChecks[index] = !ingredientChecks[index])}
 					done={!!checked[beat.globalIdx]}
 					timerActive={timerSnapshot.runningIdxs.has(beat.globalIdx)}
 					timerDone={timerSnapshot.doneIdxs.has(beat.globalIdx)}
@@ -1070,6 +1071,8 @@
 					step={beat.step}
 					globalIdx={beat.globalIdx}
 					palette={beat.palette}
+					ingredientChecks={ingredientChecks}
+					onToggleIngredient={(index) => (ingredientChecks[index] = !ingredientChecks[index])}
 					done={!!checked[beat.globalIdx]}
 					timerActive={timerSnapshot.runningIdxs.has(beat.globalIdx)}
 					timerDone={timerSnapshot.doneIdxs.has(beat.globalIdx)}

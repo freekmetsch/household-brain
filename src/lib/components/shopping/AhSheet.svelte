@@ -1,7 +1,7 @@
 <!--
 	The "Send to AH" bottom sheet — owns the whole AH client flow: preview
 	fetch, per-item decisions (product pick / freetext / skip), favorites,
-	per-item re-search, and the final push. The page opens it via the exported
+	per-item decisions and the final push. The page opens it via the exported
 	`openAhModal()` and receives back only what it owns: bonus flags for the
 	list rows (bindable) and the pushed-items-marked-bought callback.
 
@@ -15,7 +15,7 @@
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
 	import { optimistic } from '$lib/optimistic';
 	import { m } from '$lib/paraglide/messages';
-	import type { PreviewItem, PushProduct, PushFreetext, PushSkipped } from '$lib/shopping_ah';
+	import type { PreviewItem } from '$lib/shopping_ah';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { fade } from 'svelte/transition';
 	import AhPreviewItem from './AhPreviewItem.svelte';
@@ -30,7 +30,7 @@
 		/** Bonus status per item name, rendered on the page's list rows. */
 		bonusByName: Record<string, boolean>;
 		/** Called after a push so the page can mark the pushed items bought. */
-		onMarkedBought: (names: Set<string>) => void;
+		onMarkedBought: (refs: Set<string>) => void;
 	};
 	let { weekStart, pending, bonusByName = $bindable(), onMarkedBought }: Props = $props();
 
@@ -39,10 +39,7 @@
 	let ahItems = $state<PreviewItem[] | null>(null);
 	let decisions = $state<Record<string, Decision>>({});
 	let expanded = $state<Record<string, boolean>>({});
-	// Per-item AH re-search (the modal's escape hatch when the right product is
-	// not among the returned candidates): draft term + in-flight flag per ref.
-	let searchTerms = $state<Record<string, string>>({});
-	let searching = $state<Record<string, boolean>>({});
+	let previewToken = $state('');
 	let ahError = $state('');
 	let ahNotConnected = $state(false);
 	let ahPushing = $state(false);
@@ -60,8 +57,7 @@
 		ahItems = null;
 		decisions = {};
 		expanded = {};
-		searchTerms = {};
-		searching = {};
+		previewToken = '';
 		favorites = {};
 		ahError = '';
 		ahNotConnected = false;
@@ -94,10 +90,6 @@
 		return { products, text, excluded };
 	});
 
-	function itemRef(item: { name: string; amount: string | null; unit: string | null }): string {
-		return `${item.name}\u001f${item.amount ?? ''}\u001f${item.unit ?? ''}`;
-	}
-
 	export async function openAhModal() {
 		const weekAtOpen = weekStart;
 		resetAhPreview();
@@ -108,17 +100,10 @@
 
 		// AH-INVARIANT: item names originate from Dutch shopping-list data.
 		// Exclude items already covered by stock -- sending them would over-buy.
-		const toSend = pending
+		const entryIds = pending
 			.filter((i) => !i.covered)
-			.map((i) => ({
-				ref: itemRef(i),
-				sourceName: i.name,
-				name: i.selectedName,
-				amount: i.amount,
-				unit: i.unit,
-				purchaseForm: i.purchaseForm
-			}));
-		if (!toSend.length) {
+			.flatMap((i) => i.entryIds ?? []);
+		if (!entryIds.length) {
 			ahLoading = false;
 			ahError = m.shopping_ah_error_no_pending();
 			return;
@@ -128,7 +113,7 @@
 			const r = await fetch(`${base}/api/shopping/ah-preview`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ items: toSend })
+				body: JSON.stringify({ weekStart: weekAtOpen, entryIds })
 			});
 			// The user may have switched weeks or started another preview while
 			// this request was in flight. A stale response must not write into it.
@@ -147,21 +132,19 @@
 			}
 
 			const previewItems = Array.isArray(d.items) ? (d.items as PreviewItem[]) : null;
-			if (!previewItems) throw new Error('Invalid AH preview response');
+			if (!previewItems || typeof d.previewToken !== 'string') throw new Error('Invalid AH preview response');
+			previewToken = d.previewToken;
 			const nextDecisions: Record<string, Decision> = {};
 			const nextBonus: Record<string, boolean> = {};
 			const nextFavorites: Record<string, string> = {};
-			const nextSearchTerms: Record<string, string> = {};
 			for (const it of previewItems) {
 				nextDecisions[it.ref] = { mode: it.status === 'product' ? 'product' : 'freetext', pick: 0, qty: it.candidates[0]?.qty ?? 1 };
-				nextSearchTerms[it.ref] = '';
 				if (it.status === 'product') nextBonus[it.sourceName] = it.candidates[0]?.isBonus ?? false;
 				const fav = it.candidates.find((c) => c.isFavorite);
 				if (fav) nextFavorites[it.term] = fav.id;
 			}
 			decisions = nextDecisions;
 			favorites = nextFavorites;
-			searchTerms = nextSearchTerms;
 			bonusByName = { ...bonusByName, ...nextBonus };
 			ahItems = previewItems;
 		} catch {
@@ -222,52 +205,6 @@
 		expanded = { ...expanded, [ref]: false };
 	}
 
-	/**
-	 * Re-search AH with a user-typed term for one item and swap in the fresh
-	 * candidates (full 24-product pool). The item keeps its original ref/term —
-	 * the shopping row identity and push bookkeeping — only the product options
-	 * change. AH-INVARIANT: the typed term is Dutch, same as manual list entry.
-	 */
-	async function searchItem(item: PreviewItem) {
-		const term = (searchTerms[item.ref] ?? '').trim();
-		if (!term || searching[item.ref]) return;
-		const weekAtSearch = weekStart;
-		const stale = () => weekStart !== weekAtSearch || !ahItems;
-		searching = { ...searching, [item.ref]: true };
-		try {
-			const r = await fetch(`${base}/api/shopping/ah-preview`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					items: [{ ref: item.ref, sourceName: item.sourceName, name: term, amount: item.amount, unit: item.unit }],
-					full: true
-				})
-			});
-			if (stale()) return;
-			if (!r.ok) {
-				toast.error(m.shopping_toast_ah_search_failed());
-				return;
-			}
-			const d = await r.json();
-			const current = ahItems;
-			if (stale() || !current) return;
-			const fresh = d.ok ? (d.items as PreviewItem[])[0] : null;
-			if (!fresh || fresh.status !== 'product' || !fresh.candidates.length) {
-				toast.error(m.shopping_toast_ah_no_products({ term }));
-				return;
-			}
-			ahItems = current.map((it) =>
-				it.ref === item.ref
-					? { ...it, status: 'product', candidates: fresh.candidates, lowConfidence: fresh.lowConfidence }
-					: it
-			);
-			decisions = { ...decisions, [item.ref]: { mode: 'product', pick: 0, qty: fresh.candidates[0]?.qty ?? 1 } };
-			expanded = { ...expanded, [item.ref]: true };
-		} finally {
-			searching = { ...searching, [item.ref]: false };
-		}
-	}
-
 	function toggleExclude(ref: string, item: PreviewItem) {
 		const cur = decisions[ref];
 		const back: Decision =
@@ -276,24 +213,15 @@
 	}
 
 	async function confirmPush() {
-		if (!ahItems) return;
-		const products: PushProduct[] = [];
-		const freetext: PushFreetext[] = [];
-		const skipped: PushSkipped[] = [];
-		for (const it of ahItems) {
-			const d = decisions[it.ref];
-			if (!d || d.mode === 'exclude') {
-				skipped.push({ ref: it.ref, sourceName: it.sourceName, term: it.term, amount: it.amount, unit: it.unit });
-				continue;
-			}
-			const prod = it.candidates[d.pick];
-			if (d.mode === 'product' && prod) {
-				products.push({ ref: it.ref, sourceName: it.sourceName, term: it.term, amount: it.amount, unit: it.unit, id: prod.id, name: prod.name, qty: d.qty });
-			} else {
-				freetext.push({ ref: it.ref, sourceName: it.sourceName, term: it.term, amount: it.amount, unit: it.unit });
-			}
-		}
-		if (!products.length && !freetext.length) {
+		if (!ahItems || !previewToken) return;
+		const pushDecisions = ahItems.map((item) => {
+			const decision = decisions[item.ref];
+			const product = decision?.mode === 'product' ? item.candidates[decision.pick] : null;
+			return decision?.mode === 'product' && product
+				? { ref: item.ref, mode: 'product' as const, productId: product.id, qty: decision.qty }
+				: { ref: item.ref, mode: decision?.mode === 'freetext' ? 'freetext' as const : 'exclude' as const };
+		});
+		if (pushDecisions.every((decision) => decision.mode === 'exclude')) {
 			ahError = m.shopping_ah_error_all_skipped();
 			return;
 		}
@@ -303,7 +231,7 @@
 		const r = await fetch(`${base}/api/shopping/ah-push`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ weekStart: weekAtPush, products, freetext, skipped })
+			body: JSON.stringify({ previewToken, decisions: pushDecisions })
 		});
 		ahPushing = false;
 		// The push itself already landed server-side by this point -- only skip
@@ -326,8 +254,7 @@
 		if (d.ok || pushed > 0) {
 			const markedRefs = new Set<string>(d.markedBoughtRefs ?? []);
 			if (markedRefs.size) {
-				const pushedNames = new Set(ahItems.filter((item) => markedRefs.has(item.ref)).map((item) => item.sourceName.toLowerCase()));
-				onMarkedBought(pushedNames);
+				onMarkedBought(markedRefs);
 			}
 			ahResult = {
 				pushed,
@@ -399,15 +326,12 @@
 					dec={decisions[item.ref]}
 					favoriteId={favorites[item.term]}
 					expanded={expanded[item.ref]}
-					searching={searching[item.ref]}
-					bind:searchTerm={searchTerms[item.ref]}
 					onToggleExclude={() => toggleExclude(item.ref, item)}
 					onPickProduct={(idx) => pickProduct(item.ref, idx)}
 					onQuantityChange={(qty) => setQuantity(item.ref, qty)}
 					onToggleFavorite={(cand, idx) => void toggleFavorite(item, cand, idx)}
 					onDemoteToText={() => demoteToText(item.ref)}
 					onToggleExpanded={() => (expanded = { ...expanded, [item.ref]: !expanded[item.ref] })}
-					onSearch={() => void searchItem(item)}
 				/>
 			{/each}
 		</ul>

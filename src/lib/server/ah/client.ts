@@ -201,7 +201,7 @@ async function ahFetch(
 		if (!m) throw new AHNotConnectedError();
 		const token = m.access_token || (await refreshMemberTokens(m.refresh_token)).access_token;
 		r = await doReq(token);
-		if (r.status === 401) {
+		if (r.status === 401 && shouldRetryAh401(method)) {
 			const current = loadMemberTokens();
 			if (!current) throw new AHNotConnectedError();
 			r = await doReq((await refreshMemberTokens(current.refresh_token)).access_token);
@@ -213,6 +213,17 @@ async function ahFetch(
 	}
 	console.log(`[ah] ${method} ${path} -> ${r.status}${opts.auth ? ' (member)' : ''}`);
 	return r;
+}
+
+/** A replay is safe only for reads. A retried basket mutation can add the same item twice. */
+export function shouldRetryAh401(method: string): boolean {
+	return method === 'GET' || method === 'HEAD';
+}
+
+export function classifyAhWriteStatus(status: number): 'succeeded' | 'failed' | 'uncertain' {
+	if (status >= 200 && status < 300) return 'succeeded';
+	if (status >= 400 && status < 500 && status !== 401 && status !== 408) return 'failed';
+	return 'uncertain';
 }
 
 // --- Member identity validation ------------------------------------------
@@ -373,9 +384,10 @@ export async function getProductsByIds(ids: string[]): Promise<AHProduct[]> {
 }
 
 /** Push free-text lines, accounting per chunk of 10 — a late-chunk failure names its items. */
-export async function addFreetextItems(items: string[]): Promise<{ pushed: string[]; failed: string[] }> {
+export async function addFreetextItems(items: string[]): Promise<{ pushed: string[]; failed: string[]; uncertain: string[] }> {
 	const pushed: string[] = [];
 	const failed: string[] = [];
+	const uncertain: string[] = [];
 	const CHUNK = 10;
 	for (let i = 0; i < items.length; i += CHUNK) {
 		const chunk = items.slice(i, i + CHUNK);
@@ -392,21 +404,25 @@ export async function addFreetextItems(items: string[]): Promise<{ pushed: strin
 				}))
 			}
 		});
-		if (r.ok) pushed.push(...chunk);
-		else {
+		const outcome = classifyAhWriteStatus(r.status);
+		if (outcome === 'succeeded') pushed.push(...chunk);
+		else if (outcome === 'failed') {
 			const errBody = (await r.text().catch(() => '')).slice(0, 500);
 			console.error(`[ah] freetext chunk failed: ${r.status} (${chunk.length} items) body: ${errBody}`);
 			failed.push(...chunk);
+		} else {
+			uncertain.push(...chunk);
+			break;
 		}
 	}
-	console.log(`[ah] freetext push: ${pushed.length} ok, ${failed.length} failed`);
-	return { pushed, failed };
+	console.log(`[ah] freetext push: ${pushed.length} ok, ${failed.length} failed, ${uncertain.length} uncertain`);
+	return { pushed, failed, uncertain };
 }
 
 export async function addProductItems(
 	products: Array<{ id: string; qty: number }>
-): Promise<{ ok: boolean; status: number }> {
-	if (!products.length) return { ok: true, status: 200 };
+): Promise<{ ok: boolean; status: number; uncertain: boolean }> {
+	if (!products.length) return { ok: true, status: 200, uncertain: false };
 	const r = await ahFetch('PATCH', '/mobile-services/shoppinglist/v2/items', {
 		auth: true,
 		body: {
@@ -426,7 +442,7 @@ export async function addProductItems(
 	} else {
 		console.log(`[ah] product push -> ${r.status} (${products.length} items)`);
 	}
-	return { ok: r.ok, status: r.status };
+	return { ok: r.ok, status: r.status, uncertain: classifyAhWriteStatus(r.status) === 'uncertain' };
 }
 
 // --- Active order (open basket) -------------------------------------------
@@ -474,8 +490,8 @@ export async function getActiveOrder(): Promise<AHActiveOrder | null> {
 export async function addProductsToOrder(
 	orderId: number,
 	products: Array<{ id: string; qty: number }>
-): Promise<{ ok: boolean; status: number }> {
-	if (!products.length) return { ok: true, status: 200 };
+): Promise<{ ok: boolean; status: number; uncertain: boolean }> {
+	if (!products.length) return { ok: true, status: 200, uncertain: false };
 	// AH rejects duplicate productIds in one request — merge quantities.
 	const merged = new Map<number, number>();
 	for (const { id, qty } of products) merged.set(Number(id), (merged.get(Number(id)) ?? 0) + qty);
@@ -499,5 +515,5 @@ export async function addProductsToOrder(
 	} else {
 		console.log(`[ah] order push -> ${r.status} (${merged.size} products, order ${orderId})`);
 	}
-	return { ok: r.ok, status: r.status };
+	return { ok: r.ok, status: r.status, uncertain: classifyAhWriteStatus(r.status) === 'uncertain' };
 }

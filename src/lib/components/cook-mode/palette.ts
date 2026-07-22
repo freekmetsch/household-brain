@@ -36,6 +36,42 @@ export function streamPalette(streams: { id: string }[]): Record<string, BeatPal
 	return map;
 }
 
+const paletteName = new Map<BeatPalette, string>([
+	[PALETTES[0], 'amber'],
+	[PALETTES[1], 'sky'],
+	[PALETTES[2], 'emerald'],
+	[PALETTES[3], 'rose'],
+	[PALETTES[4], 'violet'],
+	[PALETTES[5], 'orange']
+]);
+
+function blendedPalette(sources: BeatPalette[]): BeatPalette {
+	const names = [...new Set(sources.map((palette) => paletteName.get(palette)))].filter(Boolean).sort();
+	const key = names.join('+');
+	if (key === 'amber+sky') return PALETTES[2];
+	if (key === 'amber+rose') return PALETTES[5];
+	if (names.length >= 3) return PALETTES[4];
+	return sources[0] ?? PALETTES[0];
+}
+
+export type CookPaletteAssignment = {
+	result: BeatPalette;
+	sources: BeatPalette[];
+};
+
+/** Assign colours in graph order so a merged stream keeps its mixed colour. */
+export function cookPaletteGraph(
+	streams: { id: string }[],
+	steps: { stream_id: string; merges_from?: string[] }[]
+): CookPaletteAssignment[] {
+	const current = streamPalette(streams);
+	return steps.map((step) => {
+		const sources = (step.merges_from ?? []).map((id) => current[id]).filter(Boolean);
+		if (sources.length >= 2) current[step.stream_id] = blendedPalette(sources);
+		return { result: current[step.stream_id] ?? PALETTES[0], sources };
+	});
+}
+
 export function fmtClock(sec: number): string {
 	const m = Math.floor(sec / 60);
 	const s = sec % 60;

@@ -11,12 +11,19 @@ describe('recipe continuity tool contracts', () => {
 		expect(properties).toHaveProperty('servings');
 	});
 
-	it.each(['add_recipe', 'edit_recipe'])('requires rich ingredients for %s writes', (name) => {
-		const properties = (tool(name).input_schema.properties ?? {}) as Record<string, unknown>;
-		const ingredientProperty = name === 'add_recipe' ? properties.ingredients : properties.add_ingredients;
-		const ingredient = ingredientProperty as { items?: { required?: string[] } };
+	it('requires rich ingredients for recipe creation', () => {
+		const properties = (tool('add_recipe').input_schema.properties ?? {}) as Record<string, unknown>;
+		const ingredient = properties.ingredients as { items?: { required?: string[] } };
 		expect(ingredient.items?.required).toEqual(expect.arrayContaining([
 			'role', 'optional', 'purchaseForm', 'scale', 'origin'
 		]));
+	});
+
+	it('routes ingredient changes through the proposal tool', () => {
+		const properties = (tool('edit_recipe').input_schema.properties ?? {}) as Record<string, unknown>;
+		expect(properties).not.toHaveProperty('add_ingredients');
+		expect(properties).not.toHaveProperty('remove_ingredient_names');
+		expect(properties).not.toHaveProperty('set_ingredient_substitutes');
+		expect(tool('propose_recipe_enhancement')).toBeDefined();
 	});
 });

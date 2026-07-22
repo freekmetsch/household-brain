@@ -32,6 +32,8 @@
 		onToggle: (globalIdx: number) => void;
 		onStartTimer: (globalIdx: number) => void;
 		onResetTimer: (globalIdx: number) => void;
+		ingredientChecks: Record<number, boolean>;
+		onToggleIngredient: (ingredientIndex: number) => void;
 	};
 	let {
 		step,
@@ -43,7 +45,9 @@
 		timerRemaining = null,
 		onToggle,
 		onStartTimer,
-		onResetTimer
+		onResetTimer,
+		ingredientChecks,
+		onToggleIngredient
 	}: Props = $props();
 </script>
 
@@ -53,17 +57,18 @@
 	     <button> may not contain another <button>, and the browser's repair of
 	     that nesting breaks Svelte's hydration. -->
 	<div class="w-full pl-4 pr-3 py-2.5 flex items-start gap-3">
-		<button
-			type="button"
-			class="flex-1 min-w-0 text-left flex items-start gap-3 active:scale-[0.99] transition"
-			onclick={() => onToggle(globalIdx)}
-		>
-			<span
-				class="shrink-0 w-5 h-5 rounded-md border-2 mt-0.5 flex items-center justify-center text-[11px] {done
-					? 'bg-success border-success text-success-content'
-					: 'border-base-300 bg-base-100'}">{done ? '✓' : ''}</span
+		<div class="min-w-0 flex-1">
+			<button
+				type="button"
+				class="w-full min-w-0 text-left flex items-start gap-3 active:scale-[0.99] transition"
+				onclick={() => onToggle(globalIdx)}
 			>
-			<div class="flex-1 min-w-0">
+				<span
+					class="shrink-0 w-5 h-5 rounded-md border-2 mt-0.5 flex items-center justify-center text-[11px] {done
+						? 'bg-success border-success text-success-content'
+						: 'border-base-300 bg-base-100'}">{done ? '✓' : ''}</span
+				>
+				<div class="flex-1 min-w-0">
 				<p
 					class="text-[14px] font-semibold leading-snug {done
 						? 'line-through text-base-content/40'
@@ -74,18 +79,26 @@
 				{#if step.body && !done}
 					<p class="text-[12px] text-base-content/60 leading-snug mt-1">{step.body}</p>
 				{/if}
-				{#if step.ingredients.length && !done}
-					<div class="flex flex-wrap gap-1 mt-1.5">
-						{#each step.ingredients as ing}
-							<span
-								class="text-[11px] px-1.5 py-0.5 rounded-full bg-base-100 border {palette.border} text-base-content/80"
-								>{ing}</span
-							>
-						{/each}
-					</div>
-				{/if}
+				</div>
+			</button>
+			{#if step.ingredients.length && !done}
+				<div class="ml-8 flex flex-wrap gap-1 mt-1.5">
+					{#each step.ingredients as ing, index}
+						{@const ingredientIndex = step.ingredient_indexes?.[index]}
+						{#if ingredientIndex == null}
+							<span class="text-[11px] px-1.5 py-0.5 rounded-full bg-base-100 border {palette.border} text-base-content/80">{ing}</span>
+						{:else}
+							<button
+								type="button"
+								class="min-h-8 text-[11px] px-2 py-1 rounded-full bg-base-100 border {palette.border} {ingredientChecks[ingredientIndex] ? 'line-through opacity-45' : 'text-base-content/80'}"
+								aria-pressed={!!ingredientChecks[ingredientIndex]}
+								onclick={() => onToggleIngredient(ingredientIndex)}
+							>{ing}</button>
+						{/if}
+					{/each}
 			</div>
-		</button>
+			{/if}
+		</div>
 		<TimerChip
 			seconds={step.timer_seconds}
 			active={timerActive}

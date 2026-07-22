@@ -108,4 +108,15 @@ describe('cook-mode cache versioning', () => {
 		expect(display?.steps[0].ingredients).toEqual(['3 ui']);
 		expect(display?.generation_id).toBe('generation-4');
 	});
+
+	it('regenerates only prep caches that combine several ingredients in one checkbox', () => {
+		const multiple = structuredClone(structured);
+		multiple.prep_tasks[0].ingredient_indexes = [0, 1];
+		expect(isStaleCookMode(multiple)).toBe(true);
+
+		const none = structuredClone(structured);
+		none.prep_tasks[0].ingredient_indexes = [];
+		expect(isStaleCookMode(none)).toBe(false);
+		expect(localizeCookMode(none, 'en')?.prep_tasks?.[0].ingredient_index).toBeNull();
+	});
 });

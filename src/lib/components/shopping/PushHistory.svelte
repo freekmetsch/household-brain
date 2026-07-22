@@ -48,11 +48,15 @@
 				<article class="px-3 py-3">
 					<div class="flex items-start justify-between gap-3">
 						<div class="min-w-0">
-							<p class="text-sm font-semibold">
-								{m.shopping_pushhistory_sent_count({
+							<p class="text-sm font-semibold {push.attemptStatus === 'uncertain' ? 'text-warning' : ''}">
+								{#if push.attemptStatus === 'pending'}
+									{m.shopping_pushhistory_pending_title()}
+								{:else if push.attemptStatus === 'uncertain'}
+									{m.shopping_pushhistory_uncertain_title()}
+								{:else}{m.shopping_pushhistory_sent_count({
 									count: push.productsPushed + push.freetextPushed,
 									destination: push.destination === 'order' ? m.shopping_ah_destination_order() : m.shopping_ah_destination_list()
-								})}
+								})}{/if}
 							</p>
 							<p class="mt-0.5 text-xs text-base-content/45">
 								{formatPushTime(push.createdAt)}{push.accountName ? ` · ${push.accountName}` : ''}
@@ -69,18 +73,25 @@
 							</span>
 						{/if}
 					</div>
+					{#if push.attemptStatus === 'pending' || push.attemptStatus === 'uncertain'}
+						<p class="mt-2 rounded-lg bg-warning/10 px-2.5 py-2 text-xs font-medium text-warning" role="alert">
+							{push.attemptStatus === 'pending' ? m.shopping_pushhistory_pending_help() : m.shopping_pushhistory_uncertain_help()}
+						</p>
+					{/if}
 					<ul class="mt-2 space-y-1 text-xs text-base-content/60">
 						{#each push.items.slice(0, 5) as item}
 							<li class="flex items-start gap-2">
 								<Icon
-									name={item.status === 'success' ? 'check' : item.status === 'failed' ? 'x' : 'minus'}
+									name={item.status === 'success' ? 'check' : item.status === 'failed' ? 'x' : item.status === 'uncertain' ? 'warn' : 'minus'}
 									class="mt-0.5 h-3.5 w-3.5 shrink-0 {item.status === 'success'
 										? 'text-success'
 										: item.status === 'failed'
 											? 'text-error'
-											: 'text-base-content/35'}"
+											: item.status === 'uncertain'
+												? 'text-warning'
+												: 'text-base-content/35'}"
 								/>
-								<span class="min-w-0 flex-1 truncate">{choiceLabel(item)}</span>
+								<span class="min-w-0 flex-1 truncate">{choiceLabel(item)}{#if item.status === 'uncertain'} · {m.shopping_pushhistory_item_uncertain()}{/if}</span>
 							</li>
 						{/each}
 						{#if push.items.length > 5}

@@ -287,6 +287,7 @@ describe('source-owned shopping week entries', () => {
 
 		const resolved = resolveLegacyShoppingEntry(db, {
 			legacyEntryId: legacy.id,
+			expectedLegacyRevision: legacy.revision,
 			action: 'manual',
 			weekStartDay: WEEK_START_DAY
 		});
@@ -295,10 +296,47 @@ describe('source-owned shopping week entries', () => {
 		expect(() =>
 			resolveLegacyShoppingEntry(db, {
 				legacyEntryId: legacy.id,
+				expectedLegacyRevision: legacy.revision,
 				action: 'dismiss',
 				weekStartDay: WEEK_START_DAY
 			})
 		).toThrow('already resolved');
+	});
+
+	it('attaches legacy state only to a fresh server-derived candidate', () => {
+		const db = createTestDb();
+		const now = new Date();
+		const target = db.insert(schema.shoppingWeekEntries).values({
+			weekStartDate: CURRENT_WEEK, sourceKey: 'manual:1', sourceKind: 'manual',
+			name: 'bloem', approvedTerms: ['bloem'], createdAt: now, updatedAt: now
+		}).returning().get();
+		const wrong = db.insert(schema.shoppingWeekEntries).values({
+			weekStartDate: CURRENT_WEEK, sourceKey: 'manual:2', sourceKind: 'manual',
+			name: 'melk', approvedTerms: ['melk'], createdAt: now, updatedAt: now
+		}).returning().get();
+		const legacy = db.insert(schema.shoppingWeekEntries).values({
+			weekStartDate: CURRENT_WEEK, sourceKey: 'legacy:8', sourceKind: 'legacy',
+			name: 'bloem', approvedTerms: [], needsReview: true, bought: true,
+			createdAt: now, updatedAt: now
+		}).returning().get();
+
+		expect(() => resolveLegacyShoppingEntry(db, {
+			legacyEntryId: legacy.id, expectedLegacyRevision: legacy.revision,
+			action: 'attach', targetEntryId: wrong.id, expectedTargetRevision: wrong.revision,
+			weekStartDay: WEEK_START_DAY
+		})).toThrow('active source');
+		expect(() => resolveLegacyShoppingEntry(db, {
+			legacyEntryId: legacy.id, expectedLegacyRevision: legacy.revision,
+			action: 'attach', targetEntryId: target.id, expectedTargetRevision: target.revision + 1,
+			weekStartDay: WEEK_START_DAY
+		})).toThrow('changed');
+
+		resolveLegacyShoppingEntry(db, {
+			legacyEntryId: legacy.id, expectedLegacyRevision: legacy.revision,
+			action: 'attach', targetEntryId: target.id, expectedTargetRevision: target.revision,
+			weekStartDay: WEEK_START_DAY
+		});
+		expect(db.select().from(schema.shoppingWeekEntries).where(eq(schema.shoppingWeekEntries.id, target.id)).get()).toMatchObject({ bought: true });
 	});
 
 	it('keeps manual IDs stable and can disable an uncaptured recurring item without history', () => {

@@ -28,7 +28,6 @@
 		category: string | null;
 		categoryEn: string | null;
 		rating: number | null;
-		totalTimeMin: number | null;
 		imageUrl: string | null;
 		lastCookedAt: string | Date | null;
 		cookedCount: number;
@@ -50,7 +49,6 @@
 		haveAll: boolean;
 		freezerOnly: boolean;
 		belowTargetOnly: boolean;
-		quickOnly: boolean;
 	};
 
 	let {
@@ -190,11 +188,10 @@
 	type ToggleName = keyof Toggles;
 
 	// data.toggles uses JS names; the URL contract uses short param names.
-	const TOGGLE_PARAM: Record<ToggleName, 'have' | 'freezer' | 'below' | 'quick'> = {
+	const TOGGLE_PARAM: Record<ToggleName, 'have' | 'freezer' | 'below'> = {
 		haveAll: 'have',
 		freezerOnly: 'freezer',
-		belowTargetOnly: 'below',
-		quickOnly: 'quick'
+		belowTargetOnly: 'below'
 	};
 
 	function recipeHref(overrides: {
@@ -206,7 +203,6 @@
 		have?: boolean;
 		freezer?: boolean;
 		below?: boolean;
-		quick?: boolean;
 	} = {}) {
 		const params = new URLSearchParams();
 		const nextQ = overrides.q ?? searchInput;
@@ -217,7 +213,6 @@
 		const nextHave = overrides.have ?? data.toggles.haveAll;
 		const nextFreezer = overrides.freezer ?? data.toggles.freezerOnly;
 		const nextBelow = overrides.below ?? data.toggles.belowTargetOnly;
-		const nextQuick = overrides.quick ?? data.toggles.quickOnly;
 		if (nextQ) params.set('q', nextQ);
 		if (nextSort !== 'title') params.set('sort', nextSort);
 		if (nextClass) params.set('class', nextClass);
@@ -226,7 +221,6 @@
 		if (nextHave) params.set('have', '1');
 		if (nextFreezer) params.set('freezer', '1');
 		if (nextBelow) params.set('below', '1');
-		if (nextQuick) params.set('quick', '1');
 		const qs = params.toString();
 		return `${base}/recipes${qs ? '?' + qs : ''}`;
 	}
@@ -269,8 +263,7 @@
 	const anyToggle = $derived(
 		data.toggles.haveAll ||
 			data.toggles.freezerOnly ||
-			data.toggles.belowTargetOnly ||
-			data.toggles.quickOnly
+		data.toggles.belowTargetOnly
 	);
 	const hasActiveFilters = $derived(
 		Boolean(data.query || ingredientFilter || classFilter || dishFilter || anyToggle)
@@ -287,7 +280,7 @@
 		classFilter = '';
 		dishFilter = '';
 		ingredientFilter = '';
-		goto(recipeHref({ q: '', sort: 'title', class: '', dish: '', ingredient: '', have: false, freezer: false, below: false, quick: false }));
+		goto(recipeHref({ q: '', sort: 'title', class: '', dish: '', ingredient: '', have: false, freezer: false, below: false }));
 	}
 
 	async function scrape() {
@@ -426,12 +419,6 @@
 				aria-pressed={data.toggles.belowTargetOnly}
 				onclick={() => toggle('belowTargetOnly')}
 			>{m.recipes_filter_below_target()}</button>
-			<button
-				type="button"
-				class={data.toggles.quickOnly ? 'ui-chip-active shrink-0' : 'ui-chip shrink-0'}
-				aria-pressed={data.toggles.quickOnly}
-				onclick={() => toggle('quickOnly')}
-			>{m.recipes_filter_quick()}</button>
 			<span class="h-4 w-px shrink-0 bg-base-300" aria-hidden="true"></span>
 			{#each CORE_FOOD_TYPE_OPTIONS as option}
 				<button
@@ -491,36 +478,21 @@
 				>
 					<a href="{base}/recipes/{recipe.slug}" class="block">
 					{#if recipe.imageUrl}
-						<figure class="h-24 overflow-hidden">
+						<figure class="h-20 overflow-hidden">
 							<SmartImage src={recipe.imageUrl} alt={title} class="h-full w-full" />
 						</figure>
 					{:else}
-						<div class="h-24 bg-base-200 flex items-center justify-center text-3xl">🍽️</div>
+						<div class="h-20 bg-base-200 flex items-center justify-center text-3xl">🍽️</div>
 					{/if}
-					<div class="p-2">
-						<h2 class="text-sm font-semibold leading-snug line-clamp-2 mb-1">{title}</h2>
-						<div class="flex items-center justify-between gap-1">
+					<div class="p-1.5">
+						<div class="flex flex-wrap items-center gap-1">
+							<h2 class="mr-auto min-w-0 text-sm font-semibold leading-snug line-clamp-2">{title}</h2>
 							{#if category}
 								<span class="ui-chip-muted max-w-24 truncate px-2 py-0.5">{category}</span>
-							{:else}
-								<span></span>
 							{/if}
 							{#if recipe.rating}
 								<span class="text-xs text-warning shrink-0">{stars(recipe.rating)}</span>
 							{/if}
-						</div>
-						<div class="flex items-center justify-between text-xs text-base-content/40 mt-0.5">
-							{#if recipe.totalTimeMin}
-								<span>⏱ {recipe.totalTimeMin} min</span>
-							{:else}
-								<span></span>
-							{/if}
-							{#if cookedLabel}
-								<span class="truncate ml-1">{cookedLabel}</span>
-							{/if}
-						</div>
-						{#if recipe.needsReview || coverage || recipe.belowTarget || recipe.isFreezerStaple || recipe.subCount > 0}
-							<div class="flex flex-wrap gap-1 mt-1">
 								{#if recipe.subCount > 0}
 									<span class="ui-chip-muted px-2 py-0.5">{m.recipes_meal_badge({ count: recipe.subCount })}</span>
 								{/if}
@@ -535,8 +507,8 @@
 								{:else if recipe.isFreezerStaple}
 									<span class="ui-chip-muted px-2 py-0.5">{m.recipes_freezer_badge()}</span>
 								{/if}
-							</div>
-						{/if}
+							{#if cookedLabel}<span class="truncate text-xs text-base-content/40">{cookedLabel}</span>{/if}
+						</div>
 					</div>
 					</a>
 					<div class="grid grid-cols-2 border-t border-base-300/70">

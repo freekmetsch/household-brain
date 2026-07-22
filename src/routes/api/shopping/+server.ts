@@ -90,8 +90,10 @@ const PostSchema = z.discriminatedUnion('action', [
 	z.object({
 		action: z.literal('resolve_legacy'),
 		legacyEntryId: z.number().int().positive(),
+		expectedLegacyRevision: z.number().int().positive(),
 		resolution: z.enum(['attach', 'manual', 'dismiss']),
-		targetEntryId: z.number().int().positive().optional()
+		targetEntryId: z.number().int().positive().optional(),
+		expectedTargetRevision: z.number().int().positive().optional()
 	}),
 	z.object({
 		action: z.literal('toggle_bought'),
@@ -203,8 +205,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json(
 				resolveLegacyShoppingEntry(db, {
 					legacyEntryId: body.legacyEntryId,
+					expectedLegacyRevision: body.expectedLegacyRevision,
 					action: body.resolution,
 					targetEntryId: body.targetEntryId,
+					expectedTargetRevision: body.expectedTargetRevision,
 					weekStartDay
 				})
 			);

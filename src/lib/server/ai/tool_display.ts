@@ -162,6 +162,25 @@ export function buildToolDisplay(
 	rawResult: unknown
 ): ToolDisplay {
 	const result = asObj(rawResult) as Result;
+	if (
+		name === 'propose_recipe_enhancement' &&
+		result.kind === 'recipe_enhancement' &&
+		typeof result.token === 'string' &&
+		typeof result.recipeSlug === 'string' &&
+		Array.isArray(result.additions) &&
+		Array.isArray(result.substitutes)
+	) {
+		return {
+			kind: 'proposal',
+			summary: 'Review recipe ideas',
+			recipeEnhancement: {
+				token: result.token,
+				recipeSlug: result.recipeSlug,
+				additions: result.additions as NonNullable<ToolDisplay['recipeEnhancement']>['additions'],
+				substitutes: result.substitutes as NonNullable<ToolDisplay['recipeEnhancement']>['substitutes']
+			}
+		};
+	}
 
 	// Plan-first (P5.2): render an ordered checklist the UI checks off best-effort
 	// as the subsequent write-displays in this turn complete. No inventory op.

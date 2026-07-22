@@ -21,6 +21,7 @@ import { updateCanonicalRecipe, type CanonicalRecipeUpdate } from '$lib/server/r
 import type { DB, ExecutorFn } from './shared';
 import { NewIngredientSchema } from '$lib/recipe_ingredient';
 import { reconcileShoppingAfterWrite } from '$lib/server/shopping_entries';
+import { generateRecipeEnhancement } from '$lib/server/ai/recipe_enhancement';
 
 // Pre-generate a bench sheet after a chat-side recipe write, so the recipe is
 // ready by the time it's opened. generateCookMode reads the module-level app
@@ -35,14 +36,6 @@ function kickTranslateIfAppDb(db: DB, slug: string) {
 	if (db === appDb) kickTranslateOnImport(slug);
 }
 
-// Shared by add_recipe and edit_recipe — one definition of what an ingredient
-// entry looks like on the wire.
-const SubstituteSchema = z.object({
-	name: z.string().trim().min(1),
-	kind: z.enum(['protein', 'spice', 'vegetable', 'other']).optional(),
-	note: z.string().trim().min(1).max(500).optional()
-});
-
 function ingredientStructureVersion(ingredients: Ingredient[]): 1 | 2 {
 	return ingredients.length > 0 && ingredients.every((ingredient) =>
 		(ingredient.role === 'cook_in' || ingredient.role === 'serve_fresh') &&
@@ -54,6 +47,11 @@ function ingredientStructureVersion(ingredients: Ingredient[]): 1 | 2 {
 }
 
 export const recipeExecutors: Record<string, ExecutorFn> = {
+	async propose_recipe_enhancement(raw, db, userId) {
+		const input = z.object({ slug: z.string() }).parse(raw);
+		const proposal = await generateRecipeEnhancement(db, { recipeSlug: input.slug, userId });
+		return { ok: true, kind: 'recipe_enhancement', ...proposal };
+	},
 	async get_recipe(raw, db) {
 		const input = z
 			.object({ slug: z.string().optional(), name: z.string().optional() })
@@ -221,22 +219,13 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 			.object({
 				slug: z.string(),
 				servings: z.number().optional(),
-				add_ingredients: z.array(NewIngredientSchema).optional(),
-				remove_ingredient_names: z.array(z.string()).optional(),
 				set_ingredient_roles: z
 					.array(z.object({ name: z.string(), role: z.enum(['cook_in', 'serve_fresh']) }))
-					.optional(),
-				set_ingredient_substitutes: z
-					.array(
-						z.object({
-							name: z.string(),
-							substitutes: z.array(SubstituteSchema).max(12)
-						})
-					)
 					.optional(),
 				directions: z.array(z.string()).optional(),
 				notes: z.string().optional()
 			})
+			.strict()
 			.parse(raw);
 
 		const recipe = db
@@ -246,14 +235,7 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 			.get();
 		if (!recipe) return { ok: false, error: 'Recipe not found' };
 
-		let ingredients = recipe.ingredients as Ingredient[];
-		if (input.remove_ingredient_names?.length) {
-			const removeSet = new Set(input.remove_ingredient_names.map((n) => n.toLowerCase()));
-			ingredients = ingredients.filter((i) => !removeSet.has(i.name.toLowerCase()));
-		}
-		if (input.add_ingredients?.length) {
-			ingredients = [...ingredients, ...input.add_ingredients];
-		}
+		const ingredients = [...(recipe.ingredients as Ingredient[])];
 
 		// Deterministic role assignment: a name that matches exactly one ingredient sets
 		// its role; a name that matches several is ambiguous → flag the recipe for review
@@ -278,28 +260,6 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 			}
 		}
 
-		const substitutesApplied: string[] = [];
-		const substitutesAmbiguous: string[] = [];
-		const substitutesUnmatched: string[] = [];
-		if (input.set_ingredient_substitutes?.length) {
-			for (const { name, substitutes } of input.set_ingredient_substitutes) {
-				const matchIdxs = ingredients
-					.map((ingredient, index) => (namesMatch(name, ingredient.name) ? index : -1))
-					.filter((index) => index >= 0);
-				if (matchIdxs.length === 1) {
-					ingredients[matchIdxs[0]] = {
-						...ingredients[matchIdxs[0]],
-						substitutes: substitutes.length ? substitutes : undefined
-					};
-					substitutesApplied.push(name);
-				} else if (matchIdxs.length > 1) {
-					substitutesAmbiguous.push(name);
-				} else {
-					substitutesUnmatched.push(name);
-				}
-			}
-		}
-
 		const updates: CanonicalRecipeUpdate = {
 			ingredients,
 			structureVersion: ingredientStructureVersion(ingredients)
@@ -308,7 +268,7 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 		if (input.directions !== undefined) updates.directions = input.directions;
 		if (input.notes !== undefined) updates.notes = input.notes;
 		// Only flag on ambiguity — a normal edit must never clear an existing review flag.
-		const ambiguousNames = [...new Set([...rolesAmbiguous, ...substitutesAmbiguous])];
+		const ambiguousNames = [...new Set(rolesAmbiguous)];
 		if (ambiguousNames.length) {
 			Object.assign(
 				updates,
@@ -318,10 +278,7 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 		// Direction or ingredient-set changes make the cached bench sheet lie —
 		// clear it and pre-generate a fresh one. Role-only edits keep the cache
 		// (roles don't appear on the sheet; no need to spend a rewrite).
-		const sheetStale =
-			input.directions !== undefined ||
-			!!input.add_ingredients?.length ||
-			!!input.remove_ingredient_names?.length;
+		const sheetStale = input.directions !== undefined;
 		if (sheetStale) {
 			updates.cookModeJson = null;
 			updates.cookModeGeneratedAt = null;
@@ -333,10 +290,7 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 		// not affect translation.
 		const translationStale =
 			input.directions !== undefined ||
-			input.notes !== undefined ||
-			!!input.add_ingredients?.length ||
-			!!input.remove_ingredient_names?.length ||
-			input.set_ingredient_substitutes !== undefined;
+			input.notes !== undefined;
 		if (translationStale) {
 			updates.titleEn = null;
 			updates.categoryEn = null;
@@ -362,9 +316,6 @@ export const recipeExecutors: Record<string, ExecutorFn> = {
 			...(rolesApplied.length ? { roles_applied: rolesApplied } : {}),
 			...(rolesAmbiguous.length ? { roles_ambiguous: rolesAmbiguous } : {}),
 			...(rolesUnmatched.length ? { roles_unmatched: rolesUnmatched } : {}),
-			...(substitutesApplied.length ? { substitutes_applied: substitutesApplied } : {}),
-			...(substitutesAmbiguous.length ? { substitutes_ambiguous: substitutesAmbiguous } : {}),
-			...(substitutesUnmatched.length ? { substitutes_unmatched: substitutesUnmatched } : {}),
 			...(ambiguousNames.length ? { needs_review: true } : {})
 		};
 	},

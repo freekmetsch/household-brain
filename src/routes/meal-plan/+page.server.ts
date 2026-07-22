@@ -78,6 +78,7 @@ export const load: PageServerLoad = async ({ url }) => {
 			categoryEn: recipes.categoryEn,
 			rating: recipes.rating,
 			servings: recipes.servings,
+			scalingMode: recipes.scalingMode,
 			targetPortions: recipes.targetPortions,
 			isFreezerStaple: recipes.isFreezerStaple,
 			lastCookedAt: recipes.lastCookedAt

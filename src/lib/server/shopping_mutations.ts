@@ -3,6 +3,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from '$lib/server/db/schema';
 import { addDays, todayIso, weekStartFor } from '$lib/week';
 import { materializeShoppingWeek } from '$lib/server/shopping_entries';
+import { normalizeNameKey } from '$lib/match';
 
 type DB = BetterSQLite3Database<typeof schema>;
 
@@ -336,8 +337,10 @@ export function resolveLegacyShoppingEntry(
 	db: DB,
 	input: {
 		legacyEntryId: number;
+		expectedLegacyRevision: number;
 		action: 'attach' | 'manual' | 'dismiss';
 		targetEntryId?: number;
+		expectedTargetRevision?: number;
 		weekStartDay: number;
 	}
 ) {
@@ -352,6 +355,7 @@ export function resolveLegacyShoppingEntry(
 			throw new ShoppingMutationError('not_found', 'Legacy shopping row not found');
 		}
 		if (legacy.resolvedAt) throw new ShoppingMutationError('already_resolved', 'Legacy shopping row is already resolved');
+		if (legacy.revision !== input.expectedLegacyRevision) throw new ShoppingMutationError('stale', 'Legacy shopping row changed');
 		assertNonpastWeek(legacy.weekStartDate, input.weekStartDay);
 		const now = new Date();
 		let resolvedSourceKey: string | null = null;
@@ -368,14 +372,19 @@ export function resolveLegacyShoppingEntry(
 				!target ||
 				target.weekStartDate !== legacy.weekStartDate ||
 				target.retiredAt ||
-				target.sourceKind === 'legacy'
+				target.sourceKind === 'legacy' ||
+				!(normalizeNameKey(target.name) === normalizeNameKey(legacy.name) ||
+					target.approvedTerms.some((term) => normalizeNameKey(term) === normalizeNameKey(legacy.selectedName ?? legacy.name)))
 			) {
 				throw new ShoppingMutationError('invalid_source', 'Choose an active source from the same week');
+			}
+			if (input.expectedTargetRevision == null || target.revision !== input.expectedTargetRevision) {
+				throw new ShoppingMutationError('stale', 'Target shopping source changed');
 			}
 			const selectedName = legacy.selectedName && target.approvedTerms.includes(legacy.selectedName)
 				? legacy.selectedName
 				: null;
-			executor
+			const updatedTarget = executor
 				.update(schema.shoppingWeekEntries)
 				.set({
 					included: legacy.included,
@@ -386,8 +395,10 @@ export function resolveLegacyShoppingEntry(
 					revision: sql`${schema.shoppingWeekEntries.revision} + 1`,
 					updatedAt: now
 				})
-				.where(eq(schema.shoppingWeekEntries.id, target.id))
-				.run();
+				.where(and(eq(schema.shoppingWeekEntries.id, target.id), eq(schema.shoppingWeekEntries.revision, input.expectedTargetRevision)))
+				.returning()
+				.get();
+			if (!updatedTarget) throw new ShoppingMutationError('stale', 'Target shopping source changed');
 			resolvedSourceKey = target.sourceKey;
 		}
 
@@ -407,7 +418,7 @@ export function resolveLegacyShoppingEntry(
 			resolvedSourceKey = manual.sourceKey;
 		}
 
-		return executor
+		const resolved = executor
 			.update(schema.shoppingWeekEntries)
 			.set({
 				resolvedAt: now,
@@ -418,8 +429,10 @@ export function resolveLegacyShoppingEntry(
 				revision: sql`${schema.shoppingWeekEntries.revision} + 1`,
 				updatedAt: now
 			})
-			.where(eq(schema.shoppingWeekEntries.id, legacy.id))
+			.where(and(eq(schema.shoppingWeekEntries.id, legacy.id), eq(schema.shoppingWeekEntries.revision, input.expectedLegacyRevision)))
 			.returning()
 			.get();
+		if (!resolved) throw new ShoppingMutationError('stale', 'Legacy shopping row changed');
+		return resolved;
 	});
 }

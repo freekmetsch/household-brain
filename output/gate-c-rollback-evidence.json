@@ -1,0 +1,18 @@
+{
+  "releaseAImage": {
+    "commit": "74b7f13",
+    "healthStatus": 200,
+    "loginStatus": 303,
+    "saveStatus": 303,
+    "recipeSlug": "bolognese",
+    "revisionBefore": 2,
+    "revisionAfter": 3,
+    "ingredientCount": 3,
+    "ingredientIdsPreserved": true,
+    "notesWritePreserved": true
+  },
+  "preReleaseAImage": {
+    "commit": "907ba22",
+    "healthStatus": 200
+  }
+}

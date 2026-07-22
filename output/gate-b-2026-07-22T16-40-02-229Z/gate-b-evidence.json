@@ -1,0 +1,188 @@
+{
+  "createdAt": "2026-07-22T16:40:03.096Z",
+  "sourcePath": "C:\\Users\\metsc\\Cloned_Repositories\\household-brain-public\\dev.db",
+  "outputDir": "C:\\Users\\metsc\\Cloned_Repositories\\household-brain-public\\output\\gate-b-2026-07-22T16-40-02-229Z",
+  "current": {
+    "label": "current-copy",
+    "beforePath": "C:\\Users\\metsc\\Cloned_Repositories\\household-brain-public\\output\\gate-b-2026-07-22T16-40-02-229Z\\current-before-0020.db",
+    "migratedPath": "C:\\Users\\metsc\\Cloned_Repositories\\household-brain-public\\output\\gate-b-2026-07-22T16-40-02-229Z\\current-migrated.db",
+    "semantic": {
+      "recipeCount": 4,
+      "ingredientCount": 12,
+      "assignedIds": 0,
+      "preservedIds": 12
+    },
+    "dryRun": {
+      "total": 0,
+      "manual": 0,
+      "exact": 0,
+      "unmatched": 0,
+      "ambiguous": 0,
+      "alreadyImported": 0
+    },
+    "imported": {
+      "total": 0,
+      "manual": 0,
+      "exact": 0,
+      "unmatched": 0,
+      "ambiguous": 0,
+      "alreadyImported": 0
+    },
+    "secondImport": {
+      "total": 0,
+      "manual": 0,
+      "exact": 0,
+      "unmatched": 0,
+      "ambiguous": 0,
+      "alreadyImported": 0
+    },
+    "secondInitialize": {
+      "dryRun": {
+        "total": 0,
+        "manual": 0,
+        "exact": 0,
+        "unmatched": 0,
+        "ambiguous": 0,
+        "alreadyImported": 0
+      },
+      "imported": {
+        "total": 0,
+        "manual": 0,
+        "exact": 0,
+        "unmatched": 0,
+        "ambiguous": 0,
+        "alreadyImported": 0
+      },
+      "alreadyComplete": true
+    },
+    "horizon": [
+      {
+        "status": "materialized",
+        "created": 0,
+        "updated": 0,
+        "retired": 0
+      },
+      {
+        "status": "materialized",
+        "created": 0,
+        "updated": 0,
+        "retired": 0
+      },
+      {
+        "status": "materialized",
+        "created": 0,
+        "updated": 0,
+        "retired": 0
+      },
+      {
+        "status": "materialized",
+        "created": 0,
+        "updated": 0,
+        "retired": 0
+      }
+    ],
+    "counts": {
+      "recurringItems": 0,
+      "weekEntries": 0,
+      "unresolvedLegacy": 0
+    },
+    "codeRollbackEdit": {
+      "exercised": true,
+      "idsPreserved": true
+    }
+  },
+  "fixture": {
+    "label": "release-a-fixture",
+    "beforePath": "C:\\Users\\metsc\\Cloned_Repositories\\household-brain-public\\output\\gate-b-2026-07-22T16-40-02-229Z\\release-a-fixture-before-0020.db",
+    "migratedPath": "C:\\Users\\metsc\\Cloned_Repositories\\household-brain-public\\output\\gate-b-2026-07-22T16-40-02-229Z\\release-a-fixture-migrated.db",
+    "semantic": {
+      "recipeCount": 2,
+      "ingredientCount": 4,
+      "assignedIds": 4,
+      "preservedIds": 0
+    },
+    "dryRun": {
+      "total": 3,
+      "manual": 1,
+      "exact": 1,
+      "unmatched": 1,
+      "ambiguous": 0,
+      "alreadyImported": 0
+    },
+    "imported": {
+      "total": 3,
+      "manual": 1,
+      "exact": 1,
+      "unmatched": 1,
+      "ambiguous": 0,
+      "alreadyImported": 0
+    },
+    "secondImport": {
+      "total": 3,
+      "manual": 0,
+      "exact": 0,
+      "unmatched": 0,
+      "ambiguous": 0,
+      "alreadyImported": 3
+    },
+    "secondInitialize": {
+      "dryRun": {
+        "total": 0,
+        "manual": 0,
+        "exact": 0,
+        "unmatched": 0,
+        "ambiguous": 0,
+        "alreadyImported": 0
+      },
+      "imported": {
+        "total": 0,
+        "manual": 0,
+        "exact": 0,
+        "unmatched": 0,
+        "ambiguous": 0,
+        "alreadyImported": 0
+      },
+      "alreadyComplete": true
+    },
+    "horizon": [
+      {
+        "status": "existing",
+        "created": 0,
+        "updated": 0,
+        "retired": 0
+      },
+      {
+        "status": "materialized",
+        "created": 0,
+        "updated": 0,
+        "retired": 0
+      },
+      {
+        "status": "materialized",
+        "created": 0,
+        "updated": 0,
+        "retired": 0
+      },
+      {
+        "status": "materialized",
+        "created": 0,
+        "updated": 0,
+        "retired": 0
+      }
+    ],
+    "counts": {
+      "recurringItems": 0,
+      "weekEntries": 6,
+      "unresolvedLegacy": 1
+    },
+    "codeRollbackEdit": {
+      "exercised": true,
+      "idsPreserved": true
+    }
+  },
+  "fullRestore": {
+    "path": "C:\\Users\\metsc\\Cloned_Repositories\\household-brain-public\\output\\gate-b-2026-07-22T16-40-02-229Z\\full-restore-pre-0020.db",
+    "pre0020ShapeRestored": true
+  },
+  "nextWeek": "2026-07-29"
+}

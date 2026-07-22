@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import { invalidateAll } from '$app/navigation';
 	import { m } from '$lib/paraglide/messages';
 	import AddItemForm from '$lib/components/shopping/AddItemForm.svelte';
 	import AhSheet from '$lib/components/shopping/AhSheet.svelte';
@@ -9,268 +10,112 @@
 	import ShoppingNotices from '$lib/components/shopping/ShoppingNotices.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
-	import { optimistic } from '$lib/optimistic';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
 	import { useChatAgent } from '$lib/chat/agent_context';
-	import { invalidateAll } from '$app/navigation';
+	import type { ShoppingListSource } from '$lib/components/shopping/types';
+	import { untrack } from 'svelte';
 
 	type Item = PageData['items'][number];
-
 	let { data }: { data: PageData } = $props();
 	const chatAgent = useChatAgent();
-
-	let items = $state<Item[]>(untrack(() => data.items.map((i) => ({ ...i }))));
-
-	// Week-switch links (?week=...) and "Back to this week" are same-route
-	// navigations -- `load` reruns and `data.items` gets a fresh identity, but
-	// local `items` (which carries optimistic bought/add/delete edits between
-	// loads) does not resync on its own. Resync whenever a new load result
-	// arrives; server truth wins over any in-flight local edit.
-	$effect(() => {
-		const next = data.items;
-		items = next.map((i) => ({ ...i }));
-	});
-
-	// Bonus status per item name, reflected onto the list rows once a preview
-	// has run (no page-load AH cost -- it rides the preview the user requested).
-	// Written by the AH sheet (bindable); rendered by the list rows.
+	let items = $state<Item[]>(untrack(() => data.items.map((item) => ({ ...item }))));
 	let bonusByName = $state<Record<string, boolean>>({});
-
-	// AH sheet instance — the header button triggers its exported openAhModal().
 	let ahSheet: { openAhModal: () => Promise<void> } | undefined = $state();
-
 	let showCovered = $state(false);
-	let activePending = $derived(items.filter((i) => i.included && !i.bought && (showCovered || !i.covered)));
-	let choices = $derived(items.filter((i) => !i.bought && !i.manual && (i.optional || i.staple)));
-	let pending = $derived(activePending.filter((i) => !i.optional && !i.staple));
-	let covered = $derived(items.filter((i) => i.included && !i.bought && i.covered));
-	let done = $derived(items.filter((i) => i.bought));
-	let visibleToBuyCount = $derived(activePending.filter((i) => !i.covered).length);
+	let pending = $derived(items.filter((item) => !item.bought));
+	let done = $derived(items.filter((item) => item.bought));
+	let covered = $derived(pending.filter((item) => item.covered));
+	let visibleToBuyCount = $derived(pending.filter((item) => !item.covered).length);
 
-	$effect(() =>
-		chatAgent.publishScreen({
-			v: 1,
-			routeId: '/shopping',
-			label: m.shopping_heading(),
-			entity: { kind: 'shopping', id: data.weekStart, label: data.weekStart },
-			facts: [
-				{ key: 'weekStart', value: data.weekStart },
-				{ key: 'toBuy', value: visibleToBuyCount },
-				{ key: 'covered', value: covered.length },
-				{ key: 'done', value: done.length }
-			]
-		})
-	);
+	$effect(() => { items = data.items.map((item) => ({ ...item })); });
+	$effect(() => chatAgent.publishScreen({
+		v: 1, routeId: '/shopping', label: m.shopping_heading(),
+		entity: { kind: 'shopping', id: data.weekStart, label: data.weekStart },
+		facts: [{ key: 'weekStart', value: data.weekStart }, { key: 'toBuy', value: visibleToBuyCount }, { key: 'done', value: done.length }]
+	}));
 
-	let emptyCopy = $derived(
-		data.emptyState === 'no_meals'
-			? {
-					title: m.shopping_empty_no_meals_title(),
-					description: m.shopping_empty_no_meals_desc()
-				}
-			: {
-					title: m.shopping_empty_nothing_title(),
-					description: m.shopping_empty_nothing_desc()
-				}
-	);
-
-	async function toggleBought(item: Item) {
-		const newBought = !item.bought;
-		item.bought = newBought;
-		items = [...items];
-		await optimistic(
-			() =>
-				fetch(`${base}/api/shopping`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						action: 'toggle_bought',
-						weekStart: data.weekStart,
-						name: item.name,
-						bought: newBought
-					})
-				}),
-			() => {
-				item.bought = !newBought;
-				items = [...items];
-			},
-			m.shopping_toast_toggle_failed()
-		);
-	}
-
-	// AddItemForm already persisted the override; reload so derived and manual
-	// quantities are recomposed by the same server projection used on refresh.
-	async function addItem(_item: Item) {
-		await invalidateAll();
-	}
-
-	async function saveChoice(item: Item, action: 'set_included' | 'set_selected_name', value: boolean | string) {
-		const before = { ...item };
-		if (action === 'set_included') item.included = Boolean(value);
-		else item.selectedName = String(value);
-		items = [...items];
-		await optimistic(
-			() => fetch(`${base}/api/shopping`, {
-				method: 'POST', headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action, weekStart: data.weekStart, name: item.name,
-					...(action === 'set_included' ? { included: value } : { selectedName: value }) })
-			}),
-			() => { Object.assign(item, before); items = [...items]; },
-			m.shopping_toast_choice_failed()
-		);
-	}
-
-	async function setStaple(item: Item, isStaple: boolean) {
-		const before = { ...item };
-		item.staple = isStaple;
-		item.included = !isStaple;
-		items = [...items];
-		const ok = await optimistic(
-			() => fetch(`${base}/api/shopping`, {
-				method: 'POST', headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'set_staple', weekStart: data.weekStart, name: item.name, isStaple })
-			}),
-			() => { Object.assign(item, before); items = [...items]; },
-			m.shopping_toast_choice_failed()
-		);
-		if (ok) toast.success(isStaple
-			? m.shopping_toast_staple_saved({ name: item.name })
-			: m.shopping_toast_staple_removed({ name: item.name }));
-	}
-
-	async function restoreManual(item: Item, amount: string | null, unit: string | null) {
+	async function mutate(body: Record<string, unknown>, success?: string): Promise<boolean> {
 		try {
-			const r = await fetch(`${base}/api/shopping`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					action: 'add_manual',
-					weekStart: data.weekStart,
-					name: item.name,
-					amount,
-					unit
-				})
-			});
-			if (!r.ok) throw new Error(`HTTP ${r.status}`);
+			const response = await fetch(`${base}/api/shopping`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
 			await invalidateAll();
+			if (success) toast.success(success);
+			return true;
 		} catch {
-			toast.error(m.shopping_toast_restore_failed());
+			toast.error(m.shopping_mutation_failed());
+			return false;
 		}
 	}
 
-	async function deleteManual(item: Item) {
-		const before = items.map((row) => ({ ...row }));
-		const manualAmount = item.manualAmount ?? (item.manual ? item.amount : null);
-		const manualUnit = item.manualUnit ?? (item.manual ? item.unit : null);
-		items = item.manual
-			? items.filter((row) => row !== item)
-			: items.map((row) => row === item ? {
-				...row,
-				amount: row.derivedAmount ?? null,
-				unit: row.derivedUnit ?? null,
-				manualContribution: false,
-				manualAmount: null,
-				manualUnit: null
-			} : row);
-		const ok = await optimistic(
-			() =>
-				fetch(`${base}/api/shopping`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ action: 'remove_manual', weekStart: data.weekStart, name: item.name })
-				}),
-			() => {
-				items = before;
-			},
-			m.shopping_toast_remove_failed()
-		);
-		if (ok) toast.undo(m.shopping_toast_removed({ name: item.name }), () => void restoreManual(item, manualAmount, manualUnit));
+	async function toggleBought(item: Item) {
+		const before = item.bought;
+		item.bought = !before;
+		items = [...items];
+		if (!(await mutate({ action: 'set_bought_entries', entryIds: item.entryIds, weekStart: data.weekStart, bought: !before }))) {
+			item.bought = before;
+			items = [...items];
+		}
 	}
 
-	// The AH push marked these items bought server-side; mirror it locally.
-	function markBought(names: Set<string>) {
-		items = items.map((item) => (names.has(item.name.toLowerCase()) ? { ...item, bought: true } : item));
+	async function saveSource(source: ShoppingListSource, input: { need: 'required' | 'optional' | 'stocked'; term: string; useInRecipe: boolean }) {
+		try {
+			const response = await fetch(`${base}/api/shopping/recipe-choice`, {
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ entryId: source.id, expectedEntryRevision: source.revision, expectedRecipeRevision: source.recipeRevision, ...input })
+			});
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			await invalidateAll();
+			toast.success(m.shopping_choice_saved());
+		} catch { toast.error(m.shopping_mutation_failed()); }
 	}
+
+	function addItem(_item: Item) { return invalidateAll(); }
+	function markBought(refs: Set<string>) {
+		items = items.map((item) => {
+			const ref = `entries:${[...(item.entryIds ?? [])].sort((a, b) => a - b).join(',')}`;
+			return refs.has(ref) ? { ...item, bought: true } : item;
+		});
+	}
+	let emptyCopy = $derived(data.emptyState === 'no_meals'
+		? { title: m.shopping_empty_no_meals_title(), description: m.shopping_empty_no_meals_desc() }
+		: { title: m.shopping_empty_nothing_title(), description: m.shopping_empty_nothing_desc() });
 </script>
 
-<svelte:head>
-	<title>{m.shopping_title()}</title>
-</svelte:head>
+<svelte:head><title>{m.shopping_title()}</title></svelte:head>
 
 <div class="ui-page-shell px-4 py-4">
 	<header class="mb-3 flex items-center justify-between gap-3">
 		<h1 class="min-w-0 text-2xl font-semibold leading-tight">{m.shopping_heading()}</h1>
-		<button
-			type="button"
-			class="btn btn-primary btn-sm h-10 min-h-0 shrink-0 gap-1.5 px-2.5 sm:px-3"
-			onclick={() => ahSheet?.openAhModal()}
-			disabled={visibleToBuyCount === 0 || data.legacyShoppingReadOnly}
-			aria-label={m.shopping_review_ah_order()}
-		>
-			<Icon name="cart" />
-			<span class="hidden sm:inline">{m.shopping_review_ah_order()}</span>
-			{#if visibleToBuyCount > 0}
-				<span class="badge badge-sm border-0 bg-base-100 px-1.5 font-bold text-primary">{visibleToBuyCount}</span>
-			{/if}
-		</button>
+		<button type="button" class="btn btn-primary btn-sm h-10 min-h-0 shrink-0 gap-1.5 px-2.5 sm:px-3" onclick={() => ahSheet?.openAhModal()} disabled={visibleToBuyCount === 0} aria-label={m.shopping_review_ah_order()}><Icon name="cart" /><span class="hidden sm:inline">{m.shopping_review_ah_order()}</span>{#if visibleToBuyCount > 0}<span class="badge badge-sm border-0 bg-base-100 px-1.5 font-bold text-primary">{visibleToBuyCount}</span>{/if}</button>
 	</header>
+	<WeekNav weekStart={data.weekStart} prevWeek={data.prevWeek} nextWeek={data.nextWeek} isCurrentWeek={data.isCurrentWeek} deliveryDate={data.deliveryDate} />
+	<ShoppingNotices showAhNotice={!data.ah.connected && items.length > 0} mealsWithoutRecipe={data.mealsWithoutRecipe} freezerMeals={data.freezerMeals} freezerMealsMissingFreshInfo={data.freezerMealsMissingFreshInfo} />
 
-	<WeekNav
-		weekStart={data.weekStart}
-		prevWeek={data.prevWeek}
-		nextWeek={data.nextWeek}
-		isCurrentWeek={data.isCurrentWeek}
-		deliveryDate={data.deliveryDate}
-	/>
-
-	<ShoppingNotices
-		showAhNotice={!data.ah.connected && items.length > 0}
-		mealsWithoutRecipe={data.mealsWithoutRecipe}
-		freezerMeals={data.freezerMeals}
-		freezerMealsMissingFreshInfo={data.freezerMealsMissingFreshInfo}
-	/>
-
-	{#if data.legacyShoppingReadOnly}
-		<div class="alert alert-info mb-3 text-sm" role="status">{m.shopping_source_migration_read_only()}</div>
-	{/if}
-
-	{#if !items.length}
-		<EmptyState iconName="basket" title={emptyCopy.title} description={emptyCopy.description}>
-			{#snippet action()}
-				{#if data.emptyState === 'no_meals'}
-					<a href="{base}/meal-plan?week={data.weekStart}" class="btn btn-primary btn-sm">{m.shopping_plan_meals_button()}</a>
-				{:else}
-					<a href="{base}/inventory" class="btn btn-outline btn-sm">{m.shopping_view_stock_button()}</a>
-				{/if}
-			{/snippet}
-		</EmptyState>
+	{#if !items.length && !data.sources.length && !data.recurring.length && !data.legacy.length}
+		<EmptyState iconName="basket" title={emptyCopy.title} description={emptyCopy.description} />
 	{:else}
 		<ShoppingLists
-			{pending}
-			{choices}
-			{done}
-			coveredCount={covered.length}
-			{visibleToBuyCount}
-			bind:showCovered
-			{bonusByName}
-			readOnly={data.legacyShoppingReadOnly}
+			{pending} {done} sources={data.sources} recurring={data.recurring} legacy={data.legacy}
+			coveredCount={covered.length} {visibleToBuyCount} bind:showCovered {bonusByName}
 			onToggleBought={toggleBought}
-			onDeleteManual={deleteManual}
-			onToggleIncluded={(item) => void saveChoice(item, 'set_included', !item.included)}
-			onSelectName={(item, selectedName) => void saveChoice(item, 'set_selected_name', selectedName)}
-			onSetStaple={(item, isStaple) => void setStaple(item, isStaple)}
+			onDeleteManual={(source) => void mutate({ action: 'remove_source_manual', entryId: source.id, expectedRevision: source.revision })}
+			onSaveSource={saveSource}
+			onAddRecurring={(input) => void mutate({ action: 'add_recurring', startWeek: data.weekStart, ...input })}
+			onEditRecurring={(item, input) => void mutate({ action: 'edit_recurring', itemId: item.id, expectedRevision: item.revision, effectiveWeek: data.weekStart, ...input })}
+			onSkipRecurring={(item) => { if (item.entryId && item.entryRevision) void mutate({ action: 'skip_recurring', entryId: item.entryId, expectedRevision: item.entryRevision }); }}
+			onDisableRecurring={(item) => void mutate({ action: 'disable_recurring', itemId: item.id, expectedRevision: item.revision, effectiveWeek: data.weekStart })}
+			onResolveLegacy={(item, resolution, targetEntryId) => {
+				const target = item.candidates.find((candidate) => candidate.id === targetEntryId);
+				void mutate({
+					action: 'resolve_legacy', legacyEntryId: item.id, expectedLegacyRevision: item.revision,
+					resolution, targetEntryId, expectedTargetRevision: target?.revision
+				});
+			}}
 		/>
 	{/if}
-
-	{#if !data.legacyShoppingReadOnly}
-		<AddItemForm weekStart={data.weekStart} onAdded={addItem} />
-	{/if}
-
+	<AddItemForm weekStart={data.weekStart} onAdded={addItem} />
 	<PushHistory pushHistory={data.pushHistory} />
 </div>
 
-	{#if !data.legacyShoppingReadOnly}
-		<AhSheet bind:this={ahSheet} weekStart={data.weekStart} pending={activePending} bind:bonusByName onMarkedBought={markBought} />
-	{/if}
+<AhSheet bind:this={ahSheet} weekStart={data.weekStart} pending={pending} bind:bonusByName onMarkedBought={markBought} />

@@ -3,6 +3,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { eq } from 'drizzle-orm';
 import * as schema from '$lib/server/db/schema';
 import {
@@ -25,6 +26,11 @@ const outputDir = path.resolve('output', `gate-b-${stamp}`);
 fs.mkdirSync(outputDir, { recursive: true });
 
 const migrationFolder = path.resolve('drizzle');
+const migrationFiles = fs
+	.readdirSync(migrationFolder)
+	.filter((name) => /^\d{4}_.+\.sql$/.test(name))
+	.sort();
+const migrationMeta = readMigrationFiles({ migrationsFolder: migrationFolder });
 const migration0020 = fs.readFileSync(path.join(migrationFolder, '0020_shopping_source_entries.sql'), 'utf8');
 const migrationStatements = migration0020
 	.split('--> statement-breakpoint')
@@ -36,10 +42,7 @@ function execStatements(sqlite: Database.Database, statements: string[]): void {
 }
 
 function releaseAMigrations(sqlite: Database.Database): void {
-	const files = fs
-		.readdirSync(migrationFolder)
-		.filter((name) => /^\d{4}_.+\.sql$/.test(name) && name < '0020_')
-		.sort();
+	const files = migrationFiles.filter((name) => name < '0020_');
 	for (const file of files) {
 		const sql = fs.readFileSync(path.join(migrationFolder, file), 'utf8');
 		execStatements(
@@ -49,6 +52,23 @@ function releaseAMigrations(sqlite: Database.Database): void {
 				.map((statement) => statement.trim())
 				.filter(Boolean)
 		);
+	}
+	recordAppliedMigrations(sqlite, files.length);
+}
+
+function recordAppliedMigrations(sqlite: Database.Database, count: number): void {
+	sqlite.exec(`CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+		id SERIAL PRIMARY KEY,
+		hash text NOT NULL,
+		created_at numeric
+	)`);
+	const insert = sqlite.prepare(
+		`INSERT INTO __drizzle_migrations (hash, created_at)
+		 SELECT ?, ?
+		 WHERE NOT EXISTS (SELECT 1 FROM __drizzle_migrations WHERE created_at = ?)`
+	);
+	for (const migration of migrationMeta.slice(0, count)) {
+		insert.run(migration.hash, migration.folderMillis, migration.folderMillis);
 	}
 }
 
@@ -106,7 +126,7 @@ function createReleaseAFixture(target: string): void {
 	const currentWeek = weekStartFor(todayIso(), 2);
 	const recipeInsert = sqlite.prepare(
 		`INSERT INTO recipes (slug, title, servings, ingredients, directions, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, '[]', ?, ?)`
+		 VALUES (?, ?, ?, ?, '["Kook volgens het recept."]', ?, ?)`
 	);
 	recipeInsert.run(
 		'bolognese',
@@ -160,7 +180,12 @@ function rehearseDatabase(
 	sqlite.pragma('foreign_keys = ON');
 	const db = drizzle(sqlite, { schema });
 	if (mode === 'journal') migrate(db, { migrationsFolder: migrationFolder });
-	else execStatements(sqlite, migrationStatements);
+	else {
+		execStatements(sqlite, migrationStatements);
+		const through0020 = migrationFiles.findIndex((name) => name.startsWith('0020_')) + 1;
+		if (through0020 === 0) throw new Error('Migration 0020 is missing from the journal');
+		recordAppliedMigrations(sqlite, through0020);
+	}
 
 	const afterIngredients = recipeIngredients(sqlite);
 	const semantic = assertIngredientMigration(beforeIngredients, afterIngredients);

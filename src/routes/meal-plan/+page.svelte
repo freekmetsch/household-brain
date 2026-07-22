@@ -19,6 +19,7 @@
 	import { useChatAgent } from '$lib/chat/agent_context';
 	import { formatDate } from '$lib/i18n';
 	import { MOTION_CONTENT_MS, MOTION_MICRO_MS } from '$lib/motion';
+	import { batchServingTarget } from '$lib/meal_batch';
 
 	type Meal = PageData['weeks'][number]['meals'][number];
 	type Week = PageData['weeks'][number];
@@ -532,9 +533,9 @@
 		});
 	}
 
-	async function changeServings(meal: Meal, delta: number) {
+	async function setServings(meal: Meal, next: number) {
 		if (meal.id < 0 || pendingServings[meal.id]) return;
-		const next = Math.max(1, Math.min(99, (meal.servings ?? 1) + delta));
+		if (!Number.isInteger(next) || next < 1 || next > 99 || next === meal.servings) return;
 		const previous = { ...meal };
 		pendingServings = { ...pendingServings, [meal.id]: true };
 		updateMeal({ ...meal, servings: next });
@@ -552,6 +553,10 @@
 		delete pending[meal.id];
 		pendingServings = pending;
 		if (ok && saved) updateMeal(saved);
+	}
+
+	async function changeServings(meal: Meal, delta: number) {
+		await setServings(meal, Math.max(1, Math.min(99, (meal.servings ?? 1) + delta)));
 	}
 
 	// One input serves both jobs: it filters the recipe lists live, and the
@@ -735,6 +740,7 @@
 				{#if week.meals.length > 0}
 					<ul class="divide-y divide-base-200">
 						{#each displayMeals(week) as meal (meal.id)}
+							{@const linkedRecipe = recipeForMeal(meal)}
 							<li
 								class="flex min-h-14 items-center gap-3 px-3 py-2.5 transition-colors hover:bg-base-200/60"
 								transition:slide={{ duration: MOTION_MICRO_MS }}
@@ -764,10 +770,29 @@
 										</span>
 									{/if}
 									{#if meal.status !== 'cooked' && meal.recipeSlug && meal.servings}
-										<div class="mt-1 inline-flex items-center rounded-lg border border-base-300" aria-label={m.mealplan_servings_label()}>
-											<button type="button" class="btn btn-ghost btn-xs h-8 min-h-0 rounded-r-none" disabled={!!pendingServings[meal.id] || meal.servings <= 1} onclick={() => changeServings(meal, -1)}>−</button>
-											<span class="px-1 text-xs tabular-nums">{m.mealplan_servings_count({ count: meal.servings })}</span>
-											<button type="button" class="btn btn-ghost btn-xs h-8 min-h-0 rounded-l-none" disabled={!!pendingServings[meal.id] || meal.servings >= 99} onclick={() => changeServings(meal, 1)}>+</button>
+										<div class="mt-1 flex flex-wrap items-center gap-1.5">
+											<div class="inline-flex items-center rounded-lg border border-base-300" aria-label={m.mealplan_servings_label()}>
+												<button type="button" class="btn btn-ghost btn-xs h-11 min-h-0 rounded-r-none" disabled={!!pendingServings[meal.id] || meal.servings <= 1} onclick={() => changeServings(meal, -1)}>−</button>
+												<span class="px-1 text-xs tabular-nums">{m.mealplan_servings_count({ count: meal.servings })}</span>
+												<button type="button" class="btn btn-ghost btn-xs h-11 min-h-0 rounded-l-none" disabled={!!pendingServings[meal.id] || meal.servings >= 99} onclick={() => changeServings(meal, 1)}>+</button>
+											</div>
+											{#if linkedRecipe}
+												<div class="inline-flex items-center gap-1" aria-label={linkedRecipe.scalingMode === 'fixed_batch' ? m.mealplan_batch_fixed() : m.mealplan_batch_scalable()}>
+													{#each [1, 2, 3, 4] as multiplier}
+														{@const target = batchServingTarget(linkedRecipe.servings, multiplier)}
+														<button
+															type="button"
+															class="btn btn-xs h-11 min-h-0 min-w-11 px-2 {target === meal.servings ? 'btn-primary' : 'btn-ghost border border-base-300'}"
+															disabled={target == null || !!pendingServings[meal.id]}
+															aria-label={target == null ? m.mealplan_batch_unavailable_aria({ multiplier }) : m.mealplan_batch_aria({ multiplier, count: target })}
+															aria-pressed={target === meal.servings}
+															onclick={() => target != null && setServings(meal, target)}
+														>
+															×{multiplier}
+														</button>
+													{/each}
+												</div>
+											{/if}
 										</div>
 									{/if}
 									{#if meal.cookedDate && meal.status === 'cooked'}

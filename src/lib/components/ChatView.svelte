@@ -16,6 +16,7 @@
 		ChatToolCall as ToolCall
 	} from '$lib/stores/chat-agent.svelte';
 	import { MOTION_MICRO_MS } from '$lib/motion';
+	import RecipeEnhancementReview from '$lib/components/chat/RecipeEnhancementReview.svelte';
 
 	let { controller: suppliedController }: { controller?: ChatAgentController } = $props();
 	const controller = untrack(() => suppliedController ?? useChatAgent());
@@ -352,6 +353,9 @@
 													</div>
 												{/if}
 											</div>
+										{/if}
+										{#if d.kind === 'proposal' && d.recipeEnhancement}
+											<RecipeEnhancementReview proposal={d.recipeEnhancement} />
 										{/if}
 									</div>
 								{:else}

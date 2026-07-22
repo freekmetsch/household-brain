@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
-import { eq, isNull } from 'drizzle-orm';
+import { eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db/index';
 import { recipes, inventoryItems, mealPlanMeals } from '$lib/server/db/schema';
 import type { Ingredient } from '$lib/server/db/schema';
@@ -12,6 +12,8 @@ import {
 import { expandMealIngredientsForServings, mealsContaining, subRecipesOf } from '$lib/server/meal_recipes';
 import { getMealPlanPrefs } from '$lib/server/meal_plan/prefs';
 import { addDays, isoWeekNumber, todayIso, weekStartFor } from '$lib/week';
+import { projectIngredient } from '$lib/recipe_scale';
+import { translatedIngredientComplete, translatedIngredientDisplay } from '$lib/recipe_ingredient';
 
 export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const { recipeLang } = await parent();
@@ -51,6 +53,22 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 	const frozenPortions = frozenPortionsByRecipe(db).get(recipe.id) ?? 0;
 	const roleCoverage = expandedIngredientRoleCoverage(db, recipe, subRecipes);
 	const cookingIngredients = expandMealIngredientsForServings(db, recipe, recipe.servings, subRecipes);
+	const componentIds = [recipe.id, ...subRecipes.map((subRecipe) => subRecipe.id)];
+	const componentRows = db.select().from(recipes).where(inArray(recipes.id, componentIds)).all();
+	const componentById = new Map(componentRows.map((row) => [row.id, row]));
+	const orderedComponents = componentIds.map((id) => componentById.get(id)).filter((row): row is NonNullable<typeof row> => row != null);
+	const translatedComponents = orderedComponents.map((row) => {
+		const source = row.ingredients as Ingredient[];
+		if (row.language === 'en') return source;
+		if (row.ingredientsEn?.length !== source.length) return null;
+		if (!source.every((ingredient, index) => translatedIngredientComplete(ingredient, row.ingredientsEn?.[index]))) return null;
+		return source.map((ingredient, index) => translatedIngredientDisplay(ingredient, row.ingredientsEn![index]));
+	});
+	const cookingIngredientsEn = translatedComponents.some((component) => component == null)
+		? null
+		: orderedComponents.flatMap((row, componentIndex) =>
+			translatedComponents[componentIndex]!.map((ingredient) => projectIngredient(ingredient, row.servings, recipe.servings))
+		);
 	const cookingIngredientStock = cookingIngredients.map((ingredient) => stockNames.some((name) => namesMatch(ingredient.name, name)));
 	const planId = Number(url.searchParams.get('plan'));
 	const plannedMeal = Number.isInteger(planId) && planId > 0
@@ -74,6 +92,7 @@ export const load: PageServerLoad = async ({ params, parent, url }) => {
 		occasionServings: linkedPlan?.servings ?? directServings ?? recipe.servings,
 		planMealId: linkedPlan?.id ?? null,
 		cookingIngredients,
+		cookingIngredientsEn,
 		cookingIngredientStock
 	};
 };

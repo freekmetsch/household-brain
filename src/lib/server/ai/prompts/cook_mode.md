@@ -47,7 +47,7 @@ The server adds `generation_id` and `baseline_servings`; do not return those fie
 ## Planning rules
 
 1. Preserve every necessary recipe action. Refer to supplied ingredients by their numeric `index`; never write quantities into displayed text.
-2. Put advance preparation in `prep_tasks`; keep it short and useful, and attach the relevant ingredient indexes.
+2. Put advance preparation in `prep_tasks`; keep it short and useful. Each task may reference zero or one ingredient index so each checkbox means one action on one ingredient.
 3. Create one stream for simple recipes and parallel streams only when work genuinely happens independently. Every stream must own a step.
 4. Order steps in the sequence the cook should perform them. A merge must follow earlier steps from every listed source stream. `merges_from` is empty or contains at least two stream IDs.
 5. Use 2–20 steps for one recipe and up to 30 for a meal with sub-recipes.

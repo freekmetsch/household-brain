@@ -5,9 +5,15 @@
 
 export type ToolDisplayDiff = { label: string; before: string | null; after: string | null };
 export type ToolDisplayOp = { opId: number; undoable: boolean };
+export type RecipeEnhancementDisplay = {
+	token: string;
+	recipeSlug: string;
+	additions: Array<{ id: string; name: string; amount: string; unit?: string; reason: string }>;
+	substitutes: Array<{ id: string; ingredientId: string; ingredientName: string; name: string; note?: string; reason: string }>;
+};
 
 export type ToolDisplay = {
-	kind: 'read' | 'write' | 'error' | 'confirm' | 'plan';
+	kind: 'read' | 'write' | 'error' | 'confirm' | 'plan' | 'proposal';
 	/** One human-readable sentence — never JSON. */
 	summary: string;
 	/** Optional structured before/after chips (e.g. a qty change). */
@@ -21,6 +27,7 @@ export type ToolDisplay = {
 	/** For kind:'plan' — the ordered step labels; the UI checks them off best-effort
 	 *  as subsequent write-displays in the same turn complete (P5.2). */
 	steps?: string[];
+	recipeEnhancement?: RecipeEnhancementDisplay;
 };
 
 type Input = Record<string, unknown>;
@@ -92,6 +99,8 @@ export function describeToolStart(name: string, rawInput: unknown): string {
 			return 'Importing the recipe…';
 		case 'edit_recipe':
 			return 'Editing the recipe…';
+		case 'propose_recipe_enhancement':
+			return 'Preparing recipe ideas…';
 		case 'log_meal':
 			return 'Logging the meal…';
 		default:

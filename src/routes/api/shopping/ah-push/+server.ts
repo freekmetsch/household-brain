@@ -1,265 +1,174 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db/index';
 import * as schema from '$lib/server/db/schema';
-import {
-	addProductItems,
-	addFreetextItems,
-	getActiveOrder,
-	addProductsToOrder,
-	getAHStatus,
-	AHNotConnectedError,
-	AH_NOT_CONNECTED
-} from '$lib/server/ah/client';
-import type { PushProduct, PushFreetext, PushSkipped } from '$lib/shopping_ah';
-import { packQuantitySchema } from '$lib/shopping_ah';
-import { z } from 'zod';
+import { addProductItems, addFreetextItems, getActiveOrder, addProductsToOrder, getAHStatus, AHNotConnectedError, AH_NOT_CONNECTED } from '$lib/server/ah/client';
 import { readJsonBody } from '$lib/server/api_body';
-import { isoDateSchema } from '$lib/date_schema';
-import { findShoppingOverride } from '$lib/server/shopping_overrides';
-import {
-	initializeShoppingSourceData,
-	isShoppingSourceMigrationComplete
-} from '$lib/server/shopping_entries';
+import { AhPushBodySchema, bindAhPushDecisions, claimAhPreviewToken, isAhEligibleShoppingRow, type AhPreviewBinding, type AhPushDecision } from '$lib/server/ah/preview_tokens';
+import { getShoppingWeekView } from '$lib/server/shopping_view';
 
-type Failed = { term: string; kind: 'product' | 'freetext' };
-type PushedChoice = PushProduct | PushFreetext;
+function freetextDescription(item: AhPreviewBinding): string {
+	return [item.term, item.amount, item.unit].filter((value) => value && value.trim()).join(' ');
+}
 
-const ChoiceBase = z.object({
-	ref: z.string().min(1).max(256),
-	sourceName: z.string().min(1).max(256),
-	term: z.string().min(1).max(256),
-	amount: z.string().max(64).nullable(),
-	unit: z.string().max(64).nullable()
-});
-const BodySchema = z.object({
-	weekStart: isoDateSchema.optional(),
-	products: z.array(ChoiceBase.extend({
-		id: z.string().min(1).max(256),
-		name: z.string().min(1).max(512),
-		qty: packQuantitySchema
-	})).default([]),
-	freetext: z.array(ChoiceBase).default([]),
-	skipped: z.array(ChoiceBase).default([])
-});
+class AhWriteUncertainError extends Error {}
 
-/**
- * AH-INVARIANT: free-text descriptions must stay Dutch. The term is the Dutch
- * shopping-list name; amount/unit originate from the same Dutch recipe/manual
- * data and are appended verbatim so the AH line reads "snoeptomaatjes 250 g"
- * instead of a bare name (F13).
- */
-function freetextDescription({ term, amount, unit }: PushFreetext): string {
-	const qty = (amount ?? '').trim();
-	const u = (unit ?? '').trim();
-	if (qty && u) return `${term} ${qty} ${u}`;
-	if (qty) return `${term} ${qty}`;
-	return term;
+function assertCurrentPreview(weekStart: string, bindings: AhPreviewBinding[]): void {
+	const currentRows = new Map(getShoppingWeekView(db, weekStart).toBuy.filter(isAhEligibleShoppingRow).map((row) => [`entries:${[...row.entryIds].sort((a, b) => a - b).join(',')}`, row]));
+	for (const binding of bindings) {
+		const row = currentRows.get(binding.ref);
+		if (!row || row.name !== binding.term || row.amount !== binding.amount || row.unit !== binding.unit) error(409, 'The shopping list changed; review it again');
+		const ids = [...row.entryIds].sort((a, b) => a - b);
+		const expectedIds = [...binding.entryIds].sort((a, b) => a - b);
+		if (JSON.stringify(ids) !== JSON.stringify(expectedIds)) error(409, 'The shopping sources changed; review them again');
+		const revisions = new Map(row.sources.map((source) => [source.id, source.revision]));
+		if (binding.entryIds.some((id, index) => revisions.get(id) !== binding.entryRevisions[index])) error(409, 'A shopping choice changed; review it again');
+	}
 }
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) error(401, 'Unauthorized');
-	initializeShoppingSourceData(db);
-	if (isShoppingSourceMigrationComplete(db)) {
-		error(409, 'Shopping changes are paused until the source-aware screen is enabled');
+	const body = await readJsonBody(request, AhPushBodySchema);
+	const preview = claimAhPreviewToken(body.previewToken, locals.user.id);
+	if (!preview) error(409, 'This AH review expired or was already used');
+	let decisions: Map<string, AhPushDecision>;
+	try {
+		decisions = bindAhPushDecisions(preview.items, body.decisions);
+	} catch (cause) {
+		error(400, cause instanceof Error ? cause.message : 'Invalid AH push decisions');
 	}
+	assertCurrentPreview(preview.weekStart, preview.items);
+	if (![...decisions.values()].some((decision) => decision.mode !== 'exclude')) error(400, 'Choose at least one item to send');
+	if (!getAHStatus().connected) return json({ ok: false, reason: AH_NOT_CONNECTED });
 
-	const body = await readJsonBody(request, BodySchema);
-	const weekStart = body.weekStart;
-	const products = body.products as PushProduct[];
-	const freetext = body.freetext as PushFreetext[];
-	const skipped = body.skipped as PushSkipped[];
-
+	let destination: 'order' | 'list' = 'list';
+	let historyId: number | null = null;
 	let productsPushed = 0;
 	let freetextPushed = 0;
-	const failed: Failed[] = [];
-	const successfulChoices: PushedChoice[] = [];
-	const failedRefs = new Set<string>();
-	const markedBoughtRefs: string[] = [];
 	let reason: string | undefined;
-	let destination: 'order' | 'list' = 'list';
-
-	// One exit shape for every path — ok is true only when nothing failed.
-	const respond = () =>
-		json({
-			ok: !reason && failed.length === 0,
-			reason,
-			productsPushed,
-			freetextPushed,
-			failed,
-			destination,
-			markedBoughtRefs,
-			accountName: getAHStatus().memberName
-		});
-
-	if (!getAHStatus().connected) {
-		reason = AH_NOT_CONNECTED;
-		return respond();
-	}
-
+	const failed: Array<{ term: string; kind: 'product' | 'freetext' }> = [];
+	const successfulRefs = new Set<string>();
+	const uncertainRefs = new Set<string>();
 	try {
-		// An open order (unplaced basket) is the household's normal state, and it
-		// locks the shopping-list write path ("Server in order mode", 412 —
-		// verified live 2026-07-08). Products then go into the order instead.
 		const order = await getActiveOrder();
 		if (order) destination = 'order';
+		const now = new Date();
+		historyId = db.insert(schema.shoppingPushHistory).values({
+			weekStartDate: preview.weekStart, userId: locals.user.id, destination,
+			accountName: getAHStatus().memberName, attemptStatus: 'pending', createdAt: now
+		}).returning({ id: schema.shoppingPushHistory.id }).get().id;
 
-		if (products.length) {
-			const items = products.map((p) => ({ id: p.id, qty: p.qty }));
-			const res = order ? await addProductsToOrder(order.id, items) : await addProductItems(items);
-			if (res.ok) {
-				productsPushed = products.length;
-				successfulChoices.push(...products);
+		const productChoices = preview.items.flatMap((item) => {
+			const decision = decisions.get(item.ref)!;
+			return decision.mode === 'product' ? [{ item, decision }] : [];
+		});
+		if (productChoices.length) {
+			const requestItems = productChoices.map(({ decision }) => ({ id: decision.productId, qty: decision.qty }));
+			const result = order ? await addProductsToOrder(order.id, requestItems) : await addProductItems(requestItems);
+			if (result.ok) {
+				productsPushed = productChoices.length;
+				productChoices.forEach(({ item }) => successfulRefs.add(item.ref));
+			} else if (result.uncertain) {
+				productChoices.forEach(({ item }) => uncertainRefs.add(item.ref));
+				throw new AhWriteUncertainError('AH returned an ambiguous product-write response');
 			} else {
-				failed.push(...products.map((p) => ({ term: p.term, kind: 'product' as const })));
-				products.forEach((p) => failedRefs.add(p.ref));
-				reason = `Albert Heijn rejected the product push (HTTP ${res.status}).`;
+				productChoices.forEach(({ item }) => failed.push({ term: item.term, kind: 'product' }));
+				reason = `Albert Heijn rejected the product push (HTTP ${result.status}).`;
 			}
 		}
 
-		if (freetext.length) {
-			const descriptions = freetext.map((item) => ({ item, description: freetextDescription(item) }));
+		const textChoices = preview.items.filter((item) => decisions.get(item.ref)?.mode === 'freetext');
+		if (textChoices.length) {
 			if (order) {
-				// An order holds real products only — free text has nowhere to go
-				// until these items are matched to products.
-				failed.push(...descriptions.map(({ description }) => ({ term: description, kind: 'freetext' as const })));
-				freetext.forEach((item) => failedRefs.add(item.ref));
-				reason ??= 'There is an open AH order, and free-text items cannot be added to an order — only matched products were sent.';
+				textChoices.forEach((item) => failed.push({ term: freetextDescription(item), kind: 'freetext' }));
+				reason ??= 'There is an open AH order, so free-text items were not sent.';
 			} else {
-				// AH-INVARIANT: free-text terms must remain Dutch for the AH shopping list.
-				const res = await addFreetextItems(descriptions.map(({ description }) => description));
-				freetextPushed = res.pushed.length;
-				if (res.failed.length) {
-					failed.push(...res.failed.map((term) => ({ term, kind: 'freetext' as const })));
-					const failedDescriptions = new Map<string, number>();
-					for (const description of res.failed) failedDescriptions.set(description, (failedDescriptions.get(description) ?? 0) + 1);
-					for (const { item, description } of descriptions) {
-						const count = failedDescriptions.get(description) ?? 0;
-						if (count > 0) {
-							failedDescriptions.set(description, count - 1);
-							failedRefs.add(item.ref);
-						} else successfulChoices.push(item);
-					}
-					reason ??= 'Some items could not be added as free text.';
-				} else {
-					successfulChoices.push(...freetext);
+				const descriptions = textChoices.map(freetextDescription);
+				const result = await addFreetextItems(descriptions);
+				freetextPushed = result.pushed.length;
+				if (result.uncertain.length) {
+					const uncertainDescriptions = new Set(result.uncertain);
+					textChoices
+						.filter((item) => uncertainDescriptions.has(freetextDescription(item)))
+						.forEach((item) => uncertainRefs.add(item.ref));
+					throw new AhWriteUncertainError('AH returned an ambiguous free-text write response');
 				}
-			}
-		}
-
-		if (weekStart && (successfulChoices.length || failedRefs.size || skipped.length)) {
-			try {
-				const recordedBoughtRefs = db.transaction((tx) => {
-					const now = new Date();
-					const history = tx
-						.insert(schema.shoppingPushHistory)
-						.values({
-							weekStartDate: weekStart,
-							userId: locals.user!.id,
-							destination,
-							accountName: getAHStatus().memberName,
-							productsPushed,
-							freetextPushed,
-							failedCount: failedRefs.size,
-							skippedCount: skipped.length,
-							createdAt: now
-						})
-						.returning({ id: schema.shoppingPushHistory.id })
-						.get();
-					if (!history) throw new Error('shopping push history insert returned no id');
-
-					const successRefs = new Set(successfulChoices.map((choice) => choice.ref));
-					const rows: (typeof schema.shoppingPushItems.$inferInsert)[] = [
-						...products.map((item) => ({
-							pushId: history.id,
-							sourceRef: item.sourceName,
-							sourceName: item.sourceName,
-							amount: item.amount,
-							unit: item.unit,
-							mode: 'product' as const,
-							ahProductId: item.id,
-							ahProductName: item.name,
-							quantity: item.qty,
-							destination,
-							status: successRefs.has(item.ref) ? ('success' as const) : ('failed' as const),
-							failureReason: successRefs.has(item.ref) ? null : (reason ?? null),
-							createdAt: now
-						})),
-						...freetext.map((item) => ({
-							pushId: history.id,
-							sourceRef: item.sourceName,
-							sourceName: item.sourceName,
-							amount: item.amount,
-							unit: item.unit,
-							mode: 'freetext' as const,
-							ahProductId: null,
-							ahProductName: null,
-							quantity: 1,
-							destination,
-							status: successRefs.has(item.ref) ? ('success' as const) : ('failed' as const),
-							failureReason: successRefs.has(item.ref) ? null : (reason ?? null),
-							createdAt: now
-						})),
-						...skipped.map((item) => ({
-							pushId: history.id,
-							sourceRef: item.sourceName,
-							sourceName: item.sourceName,
-							amount: item.amount,
-							unit: item.unit,
-							mode: 'skip' as const,
-							ahProductId: null,
-							ahProductName: null,
-							quantity: null,
-							destination,
-							status: 'skipped' as const,
-							failureReason: null,
-							createdAt: now
-						}))
-					];
-
-					if (rows.length) tx.insert(schema.shoppingPushItems).values(rows).run();
-
-					const refs: string[] = [];
-					for (const choice of successfulChoices) {
-						const existing = findShoppingOverride(tx, weekStart, choice.sourceName);
-
-						if (existing) {
-							tx.update(schema.shoppingListOverrides)
-								.set({ bought: true })
-								.where(eq(schema.shoppingListOverrides.id, existing.id))
-								.run();
-						} else {
-							tx.insert(schema.shoppingListOverrides)
-								.values({
-									weekStartDate: weekStart,
-									name: choice.sourceName,
-									bought: true,
-									manual: false,
-									selectedName: choice.term === choice.sourceName ? null : choice.term,
-									amount: choice.amount,
-									unit: choice.unit,
-									createdAt: now
-								})
-								.run();
-						}
-						refs.push(choice.ref);
-					}
-					return refs;
+				const failedCounts = new Map<string, number>();
+				result.failed.forEach((term) => failedCounts.set(term, (failedCounts.get(term) ?? 0) + 1));
+				textChoices.forEach((item, index) => {
+					const description = descriptions[index];
+					const count = failedCounts.get(description) ?? 0;
+					if (count) {
+						failedCounts.set(description, count - 1);
+						failed.push({ term: description, kind: 'freetext' });
+					} else successfulRefs.add(item.ref);
 				});
-				markedBoughtRefs.push(...recordedBoughtRefs);
-			} catch (e) {
-				console.error(`[ah] pushed items but failed to record shopping history: ${e instanceof Error ? e.message : e}`);
-				reason ??= 'Items were sent to AH, but Household Brain could not record the local history.';
+				if (result.failed.length) reason ??= 'Some free-text items could not be sent.';
 			}
 		}
-	} catch (e) {
-		if (e instanceof AHNotConnectedError) reason = AH_NOT_CONNECTED;
-		else {
-			console.error(`[ah] push failed unexpectedly: ${e instanceof Error ? e.message : e}`);
-			reason = 'Albert Heijn is unreachable right now — nothing (more) was added.';
-		}
-	}
 
-	return respond();
+		const markedBoughtRefs = db.transaction((tx) => {
+			const completedAt = new Date();
+			const rows: (typeof schema.shoppingPushItems.$inferInsert)[] = preview.items.map((item) => {
+				const decision = decisions.get(item.ref)!;
+				const product = decision.mode === 'product' ? item.offeredProducts.find((candidate) => candidate.id === decision.productId) : undefined;
+				const status = decision.mode === 'exclude' ? 'skipped' : successfulRefs.has(item.ref) ? 'success' : 'failed';
+				return {
+					pushId: historyId!, sourceRef: item.entryIds.join(','), sourceName: item.term,
+					amount: item.amount, unit: item.unit, mode: decision.mode === 'exclude' ? 'skip' : decision.mode,
+					ahProductId: product?.id ?? null, ahProductName: product?.name ?? null,
+					quantity: decision.mode === 'product' ? decision.qty : decision.mode === 'freetext' ? 1 : null,
+					destination, status, failureReason: status === 'failed' ? reason ?? 'AH rejected this item' : null, createdAt: completedAt
+				};
+			});
+			tx.insert(schema.shoppingPushItems).values(rows).run();
+			const successful = preview.items.filter((item) => successfulRefs.has(item.ref));
+			const entryIds = successful.flatMap((item) => item.entryIds);
+			if (entryIds.length) tx.update(schema.shoppingWeekEntries).set({ bought: true, revision: sql`${schema.shoppingWeekEntries.revision} + 1`, updatedAt: completedAt }).where(inArray(schema.shoppingWeekEntries.id, entryIds)).run();
+			tx.update(schema.shoppingPushHistory).set({
+				productsPushed, freetextPushed, failedCount: failed.length,
+				skippedCount: preview.items.length - successful.length - failed.length,
+				attemptStatus: failed.length ? 'failed' : 'succeeded', attemptError: reason ?? null, completedAt
+			}).where(eq(schema.shoppingPushHistory.id, historyId!)).run();
+			return successful.map((item) => item.ref);
+		});
+		return json({ ok: failed.length === 0, reason, productsPushed, freetextPushed, failed, destination, markedBoughtRefs, accountName: getAHStatus().memberName });
+	} catch (cause) {
+		const definite = cause instanceof AHNotConnectedError;
+		reason = definite ? AH_NOT_CONNECTED : 'AH may have received part of this push. Review the basket before trying again.';
+		if (historyId != null) {
+			db.transaction((tx) => {
+				const completedAt = new Date();
+				const rows: (typeof schema.shoppingPushItems.$inferInsert)[] = preview.items.map((item) => {
+					const decision = decisions.get(item.ref)!;
+					const product = decision.mode === 'product' ? item.offeredProducts.find((candidate) => candidate.id === decision.productId) : undefined;
+					const status = decision.mode === 'exclude'
+						? 'skipped'
+						: successfulRefs.has(item.ref)
+							? 'success'
+							: uncertainRefs.has(item.ref) || !definite
+								? 'uncertain'
+								: 'failed';
+					return {
+						pushId: historyId!, sourceRef: item.entryIds.join(','), sourceName: item.term,
+						amount: item.amount, unit: item.unit, mode: decision.mode === 'exclude' ? 'skip' : decision.mode,
+						ahProductId: product?.id ?? null, ahProductName: product?.name ?? null,
+						quantity: decision.mode === 'product' ? decision.qty : decision.mode === 'freetext' ? 1 : null,
+						destination, status, failureReason: status === 'success' || status === 'skipped' ? null : reason,
+						createdAt: completedAt
+					};
+				});
+				tx.insert(schema.shoppingPushItems).values(rows).run();
+				const knownSuccessfulIds = preview.items.filter((item) => successfulRefs.has(item.ref)).flatMap((item) => item.entryIds);
+				if (knownSuccessfulIds.length) tx.update(schema.shoppingWeekEntries).set({ bought: true, revision: sql`${schema.shoppingWeekEntries.revision} + 1`, updatedAt: completedAt }).where(inArray(schema.shoppingWeekEntries.id, knownSuccessfulIds)).run();
+				tx.update(schema.shoppingPushHistory).set({
+					productsPushed, freetextPushed, failedCount: failed.length,
+					skippedCount: preview.items.filter((item) => decisions.get(item.ref)?.mode === 'exclude').length,
+					attemptStatus: definite ? 'failed' : 'uncertain', attemptError: reason, completedAt
+				}).where(eq(schema.shoppingPushHistory.id, historyId!)).run();
+			});
+		}
+		return json({ ok: false, reason, productsPushed, freetextPushed, failed, destination, markedBoughtRefs: [], accountName: getAHStatus().memberName });
+	}
 };

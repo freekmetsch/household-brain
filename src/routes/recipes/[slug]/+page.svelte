@@ -13,6 +13,7 @@
 	import FreezerStockPanel from '$lib/components/recipe-detail/FreezerStockPanel.svelte';
 	import RoleCoverage from '$lib/components/recipe-detail/RoleCoverage.svelte';
 	import SubstituteSuggestions from '$lib/components/recipe-detail/SubstituteSuggestions.svelte';
+	import RecipeEnhancementSheet from '$lib/components/recipe-detail/RecipeEnhancementSheet.svelte';
 	import AddToPlanSheet from '$lib/components/recipe-detail/AddToPlanSheet.svelte';
 	import { labelWeeks, type Recipe } from '$lib/components/recipe-detail/types';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -36,6 +37,7 @@
 			occasionServings: number | null;
 			planMealId: number | null;
 			cookingIngredients: Recipe['ingredients'];
+			cookingIngredientsEn: Recipe['ingredients'] | null;
 			cookingIngredientStock: boolean[];
 		};
 	} = $props();
@@ -66,9 +68,17 @@
 		if (candidate.cuisine?.trim() && !candidate.cuisineEn?.trim()) return false;
 		if (candidate.notes?.trim() && !candidate.notesEn?.trim()) return false;
 		return candidate.ingredients.every(
-			(ingredient, index) =>
-				(candidate.ingredientsEn?.[index]?.substitutes?.length ?? 0) ===
-				(ingredient.substitutes?.length ?? 0)
+			(ingredient, index) => {
+				const translated = candidate.ingredientsEn?.[index];
+				if (!translated || translated.amount == null) return false;
+				if ((translated.substitutes?.length ?? 0) !== (ingredient.substitutes?.length ?? 0)) return false;
+				for (const field of ['unit', 'preparation', 'component'] as const) {
+					if (Boolean(ingredient[field]?.trim()) !== Boolean(translated[field]?.trim())) return false;
+				}
+				return (ingredient.substitutes ?? []).every((substitute, substituteIndex) =>
+					Boolean(substitute.note?.trim()) === Boolean(translated.substitutes?.[substituteIndex]?.note?.trim())
+				);
+			}
 		);
 	}
 
@@ -87,6 +97,10 @@
 		recipe.ingredients.map((ing, i) => ({
 			...ing,
 			name: showTranslated ? recipe.ingredientsEn![i].name : ing.name,
+			amount: showTranslated ? recipe.ingredientsEn![i].amount! : ing.amount,
+			unit: showTranslated ? recipe.ingredientsEn![i].unit : ing.unit,
+			preparation: showTranslated ? recipe.ingredientsEn![i].preparation : ing.preparation,
+			component: showTranslated ? recipe.ingredientsEn![i].component : ing.component,
 			substitutes: showTranslated
 				? (ing.substitutes ?? []).map((substitute, substituteIndex) => ({
 						...substitute,
@@ -114,7 +128,11 @@
 
 	let benchSheetFallback = $derived({
 		directions: displayDirections,
-		ingredients: data.subRecipes.length ? data.cookingIngredients : displayIngredients,
+		ingredients: data.subRecipes.length
+			? viewLang === 'en' && data.cookingIngredientsEn
+				? data.cookingIngredientsEn
+				: data.cookingIngredients
+			: displayIngredients,
 		ingredientStock: data.subRecipes.length ? data.cookingIngredientStock : data.ingredientStock,
 		viewLang,
 		baselineServings: recipe.servings,
@@ -345,6 +363,8 @@
 {/if}
 
 <SubstituteSuggestions ingredients={displayIngredients} />
+
+<RecipeEnhancementSheet slug={recipe.slug} ingredients={recipe.ingredients} />
 
 <input
 	bind:this={imageFileInput}

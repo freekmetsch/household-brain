@@ -8,7 +8,6 @@
 	import { m } from '$lib/paraglide/messages';
 	import type { PreviewItem } from '$lib/shopping_ah';
 	import { slide } from 'svelte/transition';
-	import PendingButton from '$lib/components/ui/PendingButton.svelte';
 	import { formatPrice, itemLabel } from './format';
 	import type { Decision } from './types';
 	import { MOTION_MICRO_MS } from '$lib/motion';
@@ -19,34 +18,24 @@
 		/** Household-favorite product id for this item's term, if any. */
 		favoriteId: string | undefined;
 		expanded: boolean | undefined;
-		searching: boolean | undefined;
-		searchTerm?: string;
 		onToggleExclude: () => void;
 		onPickProduct: (idx: number) => void;
 		onQuantityChange: (qty: number) => void;
 		onToggleFavorite: (cand: PreviewItem['candidates'][number], idx: number) => void;
 		onDemoteToText: () => void;
 		onToggleExpanded: () => void;
-		onSearch: () => void;
 	};
 	let {
 		item,
 		dec,
 		favoriteId,
 		expanded,
-		searching,
-		// No fallback here: Svelte rejects a two-way binding when the parent
-		// supplies `undefined` to a bindable prop with a fallback value. The sheet
-		// normally seeds every ref with an empty string, and this remains defensive
-		// for malformed/legacy previews.
-		searchTerm = $bindable(),
 		onToggleExclude,
 		onPickProduct,
 		onQuantityChange,
 		onToggleFavorite,
 		onDemoteToText,
-		onToggleExpanded,
-		onSearch
+		onToggleExpanded
 	}: Props = $props();
 
 	// `dec` is always seeded by the preview, but stay defensive like the page
@@ -56,32 +45,6 @@
 	const pick = $derived(dec?.pick ?? 0);
 	const sel = $derived(item.candidates[pick] ?? null);
 </script>
-
-{#snippet ahSearchForm()}
-	<form
-		class="mt-2 flex items-center gap-2"
-		onsubmit={(e) => {
-			e.preventDefault();
-			onSearch();
-		}}
-	>
-		<input
-			type="text"
-			class="input input-sm input-bordered min-w-0 flex-1"
-			placeholder={m.shopping_ah_search_placeholder()}
-			autocomplete="off"
-			bind:value={searchTerm}
-		/>
-		<PendingButton
-			type="submit"
-			class="btn btn-sm shrink-0"
-			pending={!!searching}
-			disabled={!(searchTerm ?? '').trim()}
-		>
-			{searching ? m.shopping_ah_searching_label() : m.shopping_ah_search_button()}
-		</PendingButton>
-	</form>
-{/snippet}
 
 <li class="rounded-2xl border border-base-300 p-3 {mode === 'exclude' ? 'opacity-50' : ''}">
 	<div class="flex items-start justify-between gap-2">
@@ -204,7 +167,6 @@
 					</li>
 				{/each}
 			</ul>
-			{@render ahSearchForm()}
 		{/if}
 	{:else}
 		<p class="mt-1.5 text-xs text-base-content/60">
@@ -221,6 +183,5 @@
 				{m.shopping_ah_use_product_instead()}
 			</button>
 		{/if}
-		{@render ahSearchForm()}
 	{/if}
 </li>

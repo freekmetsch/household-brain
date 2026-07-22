@@ -14,6 +14,7 @@ export type CookModeStep = {
 	timer_location: string | null;
 	stream_id: string;
 	merges_from: string[];
+	ingredient_indexes?: number[];
 };
 
 export type CookModeRecipe = {
@@ -89,6 +90,7 @@ export type CookModeDisplayRecipe = {
 	generation_id: string | null;
 	servings: number | null;
 	mise_en_place: string[];
+	prep_tasks?: Array<{ text: string; ingredient_index: number | null }>;
 	streams: CookModeStream[];
 	steps: CookModeStep[];
 };

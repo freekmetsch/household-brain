@@ -6,6 +6,7 @@ import path from 'path';
 import bcrypt from 'bcryptjs';
 import * as schema from './schema';
 import { MACHINE_ACTORS } from '$lib/actors';
+import { repairShopping0020Draft } from './compatibility';
 
 const sqlite = new Database(process.env.DATABASE_URL ?? './dev.db');
 sqlite.pragma('journal_mode = WAL');
@@ -17,6 +18,11 @@ if (process.env.LITESTREAM_ENABLED === '1') {
 	sqlite.pragma('wal_autocheckpoint = 0');
 } else {
 	sqlite.pragma('wal_checkpoint(TRUNCATE)');
+}
+
+const repaired0020Columns = repairShopping0020Draft(sqlite);
+if (repaired0020Columns.length) {
+	console.warn(`[db] Repaired early 0020 shopping columns: ${repaired0020Columns.join(', ')}`);
 }
 
 export const db = drizzle(sqlite, { schema });

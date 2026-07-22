@@ -67,7 +67,7 @@ function recipeBySlug(db: TestDb, slug: string) {
 }
 
 describe('edit_recipe', () => {
-	it('adds and removes ingredients, updates servings/notes, and clears the stale bench sheet', async () => {
+	it('updates servings and notes without accepting ingredient mutation fields', async () => {
 		const db = createTestDb();
 		seedRecipe(
 			db,
@@ -93,8 +93,7 @@ describe('edit_recipe', () => {
 				slug: 'stoofpot',
 				servings: 4,
 				notes: 'Extra pittig',
-				add_ingredients: [{ name: 'Rijst', amount: '200', unit: 'g' }],
-				remove_ingredient_names: ['Ui']
+				directions: ['Laat rustig sudderen.']
 			},
 			db,
 			1,
@@ -103,7 +102,7 @@ describe('edit_recipe', () => {
 
 		expect(isOk(res)).toBe(true);
 		const row = recipeBySlug(db, 'stoofpot');
-		expect((row.ingredients as Ingredient[]).map((i) => i.name)).toEqual(['Knoflook', 'Rijst']);
+		expect((row.ingredients as Ingredient[]).map((i) => i.name)).toEqual(['Ui', 'Knoflook']);
 		expect(row.servings).toBe(4);
 		expect(row.notes).toBe('Extra pittig');
 		// Ingredient-set change invalidates the cached bench sheet.
@@ -187,7 +186,7 @@ describe('edit_recipe', () => {
 		expect(res.roles_unmatched).toEqual(['Zalm']);
 	});
 
-	it('stores ingredient substitutes deterministically and invalidates only the EN cache', async () => {
+	it('rejects direct substitute mutation so proposals remain the only boundary', async () => {
 		const db = createTestDb();
 		seedRecipe(
 			db,
@@ -221,18 +220,13 @@ describe('edit_recipe', () => {
 			turnCtx()
 		)) as EditResult;
 
-		expect(isOk(res)).toBe(true);
-		expect(res.substitutes_applied).toEqual(['Kipfilet']);
+		expect(isOk(res)).toBe(false);
+		expect((res as ErrorResult).error).toContain('Unrecognized key');
 		const row = recipeBySlug(db, 'curry');
-		expect((row.ingredients as Ingredient[])[0].substitutes).toEqual([
-			{ name: 'Tempeh', kind: 'protein', note: 'Korter bakken; wordt sneller droog.' }
-		]);
-		// Alternatives do not change today's cooking steps, so the sheet stays.
+		expect((row.ingredients as Ingredient[])[0].substitutes).toBeUndefined();
 		expect(row.cookModeJson).not.toBeNull();
-		// They are displayed in translation, so the EN cache must refresh.
-		expect(row.ingredientsEn).toBeNull();
-		expect(row.translationStatus).toBe('pending');
-		expect(row.contentRevision).toBe(2);
+		expect(row.ingredientsEn).not.toBeNull();
+		expect(row.contentRevision).toBe(1);
 	});
 
 	it('rejects trusted provenance in model input but preserves it on an existing ingredient', async () => {
@@ -259,7 +253,7 @@ describe('edit_recipe', () => {
 			1,
 			turnCtx()
 		)) as ErrorResult;
-		expect(rejected.error).toMatch(/^Invalid input for add_ingredients/);
+		expect(rejected.error).toContain('Unrecognized key');
 
 		const edited = (await executeToolCall(
 			'edit_recipe',
@@ -292,7 +286,7 @@ describe('edit_recipe', () => {
 			1,
 			turnCtx()
 		)) as ErrorResult;
-		expect(addRejected.error).toMatch(/^Invalid input for add_ingredients/);
+		expect(addRejected.error).toContain('Unrecognized key');
 
 		const createRejected = (await executeToolCall(
 			'add_recipe',
@@ -333,7 +327,7 @@ describe('edit_recipe', () => {
 			1,
 			turnCtx()
 		)) as ErrorResult;
-		expect(res.error).toMatch(/^Invalid input for add_ingredients/);
+		expect(res.error).toContain('Unrecognized key');
 		// Nothing changed.
 		const row = recipeBySlug(db, 'stoofpot');
 		expect((row.ingredients as Ingredient[]).map((i) => i.name)).toEqual(['Ui']);

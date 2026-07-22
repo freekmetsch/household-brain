@@ -1,5 +1,5 @@
 # Feature List: Shopping and Recipe Decisions
-_Status: In flight - Phase 2 of 5 (paused 2026-07-22 for Gate C)_
+_Status: In flight - Phase 4 of 5 (Release C ready; Gate D closed)_
 
 ## Problem framing
 
@@ -338,7 +338,16 @@ The Release B candidate implements SRD-1A through SRD-4B behind the old shopping
 - The fresh code rollback passed: Release A at `74b7f13` logged in, saved `adam-ragusea-bolognese`, advanced its revision, and preserved all 20 ingredient IDs and the note edit on the post-migration copy.
 - The fresh full rollback passed: the pre-Release-A image at `907ba22` returned healthy against the fresh pre-`0020` snapshot copy.
 - The production service is online on Release B. Its health endpoint and read-only shopping initializer return 200; the final live counts remain 8 recipes, 115 ingredient IDs, 75 overrides, 106 week entries, and 14 unresolved rows.
-- Gate C remains closed. Release C UI, recipe mutations, AH push changes, cooking work, and cleanup have not started.
+- Gate C was approved by Freek on 2026-07-22 for SRD-5 through SRD-16, including the reviewed SRD-6 recipe mutation. SRD-17 cleanup remains closed behind Gate D.
+
+### Release C result
+
+- SRD-5 through SRD-16 are implemented. Source-aware shopping, recipe choices, bounded AH preview tokens, reviewed recipe enhancement, batch portions, shared cooking checks, deterministic merge colors, call-boundary fingerprints, complete ingredient translation, and compact recipe cards are enabled.
+- 55 unit-test files / 361 tests, Svelte check, and the production build pass. The AH request fixtures reject invented product IDs, missing or duplicate source refs, invalid quantities, and extra client copies of server-owned facts; shared eligibility tests exclude covered rows and unapproved terms from preview and push. State tests also prove pending-before-dispatch, one dispatch, definite failure, timeout or 5xx uncertainty, local finalization failure, bought state, and history rows.
+- Local production-build browser checks pass against a temporary database copy at 375, 768, and 1280 px in English and Dutch with no horizontal overflow or browser errors. The meal-plan `x2` control changed 4 servings to 8 through the real server action.
+- Both rollback paths pass against journal-valid fresh fixtures: Release A saves a migrated recipe while preserving ingredient IDs, and the pre-SRD-0 image starts against the full pre-`0020` restore.
+- Startup now repairs only the two columns omitted by the early draft of migration `0020`, and only when that exact partial table shape exists. The repair is idempotent and preserves rows; fresh and pre-`0020` databases remain unchanged.
+- Gate D remains closed. The 14 live unresolved legacy rows must be attached, converted, dismissed, or named in an approved exception list before SRD-17. Evidence is in `output/gate-c-evidence.md`.
 
 ### SRD-5 - Rebuild the shopping screen around three tabs
 
@@ -563,12 +572,12 @@ The strongest objection is that stable IDs, source-rich expansion, two tables, a
 
 Goal: add source-aware shopping decisions, weekly buys, manual recipe enhancement, whole-batch planning, component-aware ingredients, deterministic cook colors/call ownership, complete ingredient translation, and denser recipe cards.
 
-Current state: Release B / SRD-1A through SRD-4B is live at `b9e57ed`. Migration `0020`, exact live counts, the read-only screen, and both fresh rollback checks pass; Gate C remains closed.
+Current state: Release C / SRD-5 through SRD-16 is complete. The full test, build, browser, tamper, call-boundary, migration, and rollback checks pass; Gate D remains closed.
 
-First command: `/run` only after explicit Gate C approval. Approval authorizes SRD-5 through SRD-16, including the R3 recipe mutation in SRD-6; it does not authorize SRD-17 cleanup.
+First command: resolve the 14 live legacy rows through the new shopping review sheet, then present Gate D evidence. Do not run SRD-17 without explicit Gate D approval.
 
-First files: `src/lib/recipe_ingredient.ts`, `src/lib/server/db/schema.ts`, next append-only Drizzle migration, `src/lib/server/meal_recipes.ts`, `src/lib/server/shopping_needs.ts`.
+First files: `output/gate-c-evidence.md`, this feature list, and the live shopping legacy-review sheet.
 
-Pending verification: Freek's Gate C decision. If approved, keep the 14 unresolved legacy rows blocked until the new review flow can attach, convert, or dismiss them without guessing.
+Pending verification: zero unresolved active live legacy rows or a named, user-approved exception list. SRD-17 compatibility cleanup and archival stay blocked.
 
 Decisions fixed: `Every week`; weekly alternatives do not rewrite recipes unless `Use in recipe` is chosen; AI additions start as `Nice to have`.

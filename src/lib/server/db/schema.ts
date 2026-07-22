@@ -341,7 +341,7 @@ export const ahFavorites = sqliteTable('ah_favorites', {
 
 export type ShoppingPushDestination = 'order' | 'list';
 export type ShoppingPushItemMode = 'product' | 'freetext' | 'skip';
-export type ShoppingPushItemStatus = 'success' | 'failed' | 'skipped';
+export type ShoppingPushItemStatus = 'success' | 'failed' | 'skipped' | 'uncertain';
 export type ShoppingPushAttemptStatus = 'pending' | 'succeeded' | 'failed' | 'uncertain';
 
 export const shoppingPushHistory = sqliteTable('shopping_push_history', {

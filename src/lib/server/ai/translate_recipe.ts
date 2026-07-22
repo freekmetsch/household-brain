@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import {
 	createMessage,
@@ -20,6 +20,10 @@ const TranslationSchema = z.object({
 	ingredients_en: z.array(
 		z.object({
 			name: z.string().min(1),
+			amount: z.string(),
+			unit: z.string().min(1).optional(),
+			preparation: z.string().min(1).optional(),
+			component: z.string().min(1).optional(),
 			substitutes: z
 				.array(
 					z.object({
@@ -36,6 +40,33 @@ const TranslationSchema = z.object({
 
 function fallbackRecipe(slug: string) {
 	return db.select().from(recipes).where(eq(recipes.slug, slug)).get() ?? null;
+}
+
+export function numericTokens(value: string): string[] {
+	return value.match(/\d+(?:[.,]\d+)?(?:\s*[–-]\s*\d+(?:[.,]\d+)?)?|\d+\s+\d+\/\d+|\d+\/\d+|[¼½¾⅓⅔⅛⅜⅝⅞]/g) ?? [];
+}
+
+export function validateTranslatedIngredients(source: Ingredient[], translated: z.infer<typeof TranslationSchema>['ingredients_en']): void {
+	if (translated.length !== source.length) throw new Error('Translated ingredient count does not match source');
+	for (const [index, ingredient] of source.entries()) {
+		const result = translated[index];
+		if (numericTokens(result.amount).join('|') !== numericTokens(ingredient.amount).join('|')) {
+			throw new Error(`Translated amount changed numeric tokens for ingredient ${index}`);
+		}
+		for (const field of ['unit', 'preparation', 'component'] as const) {
+			if (Boolean(ingredient[field]?.trim()) !== Boolean(result[field]?.trim())) {
+				throw new Error(`Translated ${field} completeness does not match source ingredient ${index}`);
+			}
+		}
+		if (result.substitutes.length !== (ingredient.substitutes?.length ?? 0)) {
+			throw new Error(`Translated substitute count does not match source ingredient ${index}`);
+		}
+		for (const [substituteIndex, substitute] of (ingredient.substitutes ?? []).entries()) {
+			if (Boolean(substitute.note?.trim()) !== Boolean(result.substitutes[substituteIndex]?.note?.trim())) {
+				throw new Error(`Translated substitute note completeness does not match source ingredient ${index}`);
+			}
+		}
+	}
 }
 
 export async function translateRecipe(slug: string, opts: { force?: boolean } = {}) {
@@ -73,20 +104,10 @@ export async function translateRecipe(slug: string, opts: { force?: boolean } = 
 		const text = msg.text;
 		const translated = TranslationSchema.parse(parseModelJson(text));
 
-		if (translated.ingredients_en.length !== recipe.ingredients.length) {
-			throw new Error('Translated ingredient count does not match source');
-		}
+		const sourceIngredients = recipe.ingredients as Ingredient[];
+		validateTranslatedIngredients(sourceIngredients, translated.ingredients_en);
 		if (translated.directions_en.length !== recipe.directions.length) {
 			throw new Error('Translated direction count does not match source');
-		}
-		const sourceIngredients = recipe.ingredients as Ingredient[];
-		for (const [index, ingredient] of sourceIngredients.entries()) {
-			if (
-				translated.ingredients_en[index].substitutes.length !==
-				(ingredient.substitutes?.length ?? 0)
-			) {
-				throw new Error(`Translated substitute count does not match source ingredient ${index}`);
-			}
 		}
 		// An English view is atomic: optional source copy is either translated or
 		// omitted only when the source is omitted. Accepting null here produced a
@@ -101,7 +122,7 @@ export async function translateRecipe(slug: string, opts: { force?: boolean } = 
 			}
 		}
 
-		return db
+		const updated = db
 			.update(recipes)
 			.set({
 				titleEn: translated.title_en,
@@ -114,14 +135,15 @@ export async function translateRecipe(slug: string, opts: { force?: boolean } = 
 				translatedAt: new Date(),
 				updatedAt: new Date()
 			})
-			.where(eq(recipes.slug, slug))
+			.where(and(eq(recipes.id, recipe.id), eq(recipes.contentRevision, recipe.contentRevision)))
 			.returning()
 			.get();
+		return updated ?? fallbackRecipe(slug);
 	} catch (err) {
 		console.error('[translate_recipe] failed', slug, err);
 		db.update(recipes)
 			.set({ translationStatus: 'error', translatedAt: new Date(), updatedAt: new Date() })
-			.where(eq(recipes.slug, slug))
+			.where(and(eq(recipes.id, recipe.id), eq(recipes.contentRevision, recipe.contentRevision)))
 			.run();
 		return fallbackRecipe(slug);
 	}

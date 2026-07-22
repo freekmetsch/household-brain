@@ -375,56 +375,24 @@ export const tools: Anthropic.Tool[] = [
 		}
 	},
 	{
+		name: 'propose_recipe_enhancement',
+		description:
+			'Prepare reviewable Dutch ingredient additions and alternatives for a saved recipe. This never edits the recipe; the user applies selected ideas in the review card.',
+		input_schema: {
+			type: 'object',
+			properties: { slug: { type: 'string' } },
+			required: ['slug']
+		}
+	},
+	{
 		name: 'edit_recipe',
 		description:
-			'Edit a recipe: add/remove ingredients, update steps, change servings, set ingredient roles, or save practical ingredient substitutes.',
+			'Edit recipe servings, steps, notes, or cook-in/serve-fresh roles. Ingredient additions, removals, and alternatives require the recipe enhancement review tool.',
 		input_schema: {
 			type: 'object',
 			properties: {
 				slug: { type: 'string' },
 				servings: { type: 'number' },
-				add_ingredients: {
-					type: 'array',
-					items: {
-						type: 'object',
-						properties: {
-							name: { type: 'string' },
-							amount: { type: 'string' },
-							unit: { type: 'string' },
-							preparation: { type: 'string', description: 'Preparation detail, kept separate from the Dutch product name' },
-							optional: { type: 'boolean', description: 'True only when the ingredient is not required' },
-							component: { type: 'string', description: 'Optional recipe section such as sauce or garnish' },
-							purchaseForm: { type: 'string', enum: ['fresh', 'preserved', 'frozen', 'dried', 'any'] },
-							scale: { type: 'string', enum: ['linear', 'whole', 'fixed'] },
-							origin: {
-								type: 'string',
-								enum: ['source', 'ai_suggested'],
-								description: 'AI-suggested sides must use ai_suggested and optional=true'
-							},
-							substitutes: {
-								type: 'array',
-								description: 'Optional Dutch-named ingredient alternatives.',
-								items: {
-									type: 'object',
-									properties: {
-										name: { type: 'string' },
-										kind: { type: 'string', enum: ['protein', 'spice', 'vegetable', 'other'] },
-										note: { type: 'string' }
-									},
-									required: ['name']
-								}
-							},
-							role: {
-								type: 'string',
-								enum: ['cook_in', 'serve_fresh'],
-								description:
-									'cook_in = ends up in the frozen leftover; serve_fresh = bought fresh the week it is eaten'
-							}
-						},
-							required: ['name', 'amount', 'role', 'optional', 'purchaseForm', 'scale', 'origin']
-					}
-				},
-				remove_ingredient_names: { type: 'array', items: { type: 'string' } },
 				set_ingredient_roles: {
 					type: 'array',
 					description:
@@ -440,30 +408,6 @@ export const tools: Anthropic.Tool[] = [
 							}
 						},
 						required: ['name', 'role']
-					}
-				},
-				set_ingredient_substitutes: {
-					type: 'array',
-					description:
-						'Replace the saved alternatives for existing ingredients. Match each ingredient by its stored Dutch name. Use an empty substitutes array to clear them.',
-					items: {
-						type: 'object',
-						properties: {
-							name: { type: 'string', description: 'Ingredient name as stored on the recipe (Dutch)' },
-							substitutes: {
-								type: 'array',
-								items: {
-									type: 'object',
-									properties: {
-										name: { type: 'string', description: 'Dutch substitute name' },
-										kind: { type: 'string', enum: ['protein', 'spice', 'vegetable', 'other'] },
-										note: { type: 'string', description: 'Short practical use/caution note' }
-									},
-									required: ['name']
-								}
-							}
-						},
-						required: ['name', 'substitutes']
 					}
 				},
 				directions: { type: 'array', items: { type: 'string' } },

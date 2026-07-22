@@ -32,7 +32,6 @@ export const load: PageServerLoad = async ({ url, parent, locals }) => {
 	const haveAll = url.searchParams.get('have') === '1';
 	const freezerOnly = url.searchParams.get('freezer') === '1';
 	const belowTargetOnly = url.searchParams.get('below') === '1';
-	const quickOnly = url.searchParams.get('quick') === '1';
 	const { recipeLang } = await parent();
 
 	const stockNames = db
@@ -103,7 +102,6 @@ export const load: PageServerLoad = async ({ url, parent, locals }) => {
 	if (haveAll) enriched = enriched.filter((r) => r.hasAllIngredients);
 	if (freezerOnly) enriched = enriched.filter((r) => r.isFreezerStaple);
 	if (belowTargetOnly) enriched = enriched.filter((r) => r.belowTarget);
-	if (quickOnly) enriched = enriched.filter((r) => r.totalTimeMin != null && r.totalTimeMin <= 30);
 
 	if (sortBy === 'rating') {
 		enriched.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
@@ -136,7 +134,7 @@ export const load: PageServerLoad = async ({ url, parent, locals }) => {
 		classFilter,
 		dishFilter,
 		ingredientFilter,
-		toggles: { haveAll, freezerOnly, belowTargetOnly, quickOnly },
+		toggles: { haveAll, freezerOnly, belowTargetOnly },
 		dishTypes: DISH_TYPES,
 		recipeLang,
 		weeks

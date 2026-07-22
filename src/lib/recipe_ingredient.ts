@@ -87,10 +87,40 @@ export type IngredientScale = 'linear' | 'whole' | 'fixed';
 export type IngredientOrigin = 'source' | 'ai_suggested' | 'ai_accepted';
 export type TranslatedIngredient = {
 	name: string;
+	/** Missing only on pre-SRD-14 caches, which the display marks stale. */
+	amount?: string;
+	unit?: string;
 	preparation?: string;
 	component?: string;
 	substitutes?: Array<{ name: string; note?: string }>;
 };
+
+export function translatedIngredientComplete(source: Ingredient, translated: TranslatedIngredient | undefined): translated is TranslatedIngredient & { amount: string } {
+	if (!translated?.name.trim() || translated.amount == null) return false;
+	for (const field of ['unit', 'preparation', 'component'] as const) {
+		if (Boolean(source[field]?.trim()) !== Boolean(translated[field]?.trim())) return false;
+	}
+	if ((source.substitutes?.length ?? 0) !== (translated.substitutes?.length ?? 0)) return false;
+	return (source.substitutes ?? []).every((substitute, index) =>
+		Boolean(substitute.note?.trim()) === Boolean(translated.substitutes?.[index]?.note?.trim())
+	);
+}
+
+export function translatedIngredientDisplay(source: Ingredient, translated: TranslatedIngredient): Ingredient {
+	return {
+		...source,
+		name: translated.name,
+		amount: translated.amount ?? source.amount,
+		unit: translated.unit,
+		preparation: translated.preparation,
+		component: translated.component,
+		substitutes: (source.substitutes ?? []).map((substitute, index) => ({
+			...substitute,
+			name: translated.substitutes?.[index]?.name ?? substitute.name,
+			note: translated.substitutes?.[index]?.note
+		}))
+	};
+}
 
 export function parseIngredientsForWrite(raw: unknown) {
 	return ensureIngredientIds(IngredientArraySchema.parse(raw));

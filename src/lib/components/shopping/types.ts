@@ -1,5 +1,29 @@
 import type { IngredientPurchaseForm } from '$lib/recipe_ingredient';
 
+export type ShoppingListSource = {
+	id: number;
+	revision: number;
+	sourceKind: 'recipe' | 'weekly' | 'manual' | 'legacy';
+	recipeId: number | null;
+	recipeSlug: string | null;
+	recipeTitle: string | null;
+	recipeRevision: number | null;
+	ingredientId: string | null;
+	name: string;
+	term: string;
+	amount: string | null;
+	unit: string | null;
+	component: string | null;
+	mealNames: string[];
+	approvedTerms: string[];
+	included: boolean;
+	bought: boolean;
+	optional: boolean;
+	staple: boolean;
+	purchaseForm?: IngredientPurchaseForm;
+	needsReview: boolean;
+};
+
 export type ShoppingListItem = {
 	name: string;
 	amount: string | null;
@@ -22,6 +46,8 @@ export type ShoppingListItem = {
 	incompatibleQuantities?: boolean;
 	forMeals?: string[];
 	freshSide?: boolean;
+	entryIds?: number[];
+	sources?: ShoppingListSource[];
 };
 
 /** Per-item push decision inside the AH preview sheet. */
