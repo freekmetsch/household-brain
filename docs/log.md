@@ -29,3 +29,9 @@ Touched: docs/archive/2026-07/FEATURE_LIST_RECIPE_COOKING_SHOPPING.md
 
 ## 2026-07-22 | shipped | recipe, cooking, and shopping continuity
 Implemented RCS-1 through RCS-13. Occasion portions now carry through planning, groceries, AH review, and cooking; recipe enrichment is resumable; image writes are bounded; and count-pack pricing applies beyond eggs.
+
+## 2026-07-22 13:09 | html-artifact | plan: shopping-recipe-decisions
+Touched: docs/artifacts/2026-07-22-plan-shopping-recipe-decisions.html
+
+## 2026-07-22 14:26 | html-artifact | update: shopping-recipe-decisions recording
+Touched: docs/artifacts/2026-07-22-plan-shopping-recipe-decisions.html

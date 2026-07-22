@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shopping and Recipe Decisions Plan</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #20251f;
+      --muted: #687067;
+      --paper: #f4f0e6;
+      --card: #fffdf8;
+      --line: #d8d1c2;
+      --green: #356747;
+      --green-soft: #e1ecdf;
+      --amber: #b9771d;
+      --amber-soft: #f7e8c8;
+      --red: #a54635;
+      --blue: #42657a;
+      --shadow: 0 18px 48px rgba(42, 47, 40, .09);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(185, 119, 29, .15), transparent 28rem),
+        linear-gradient(180deg, #faf7ef 0, var(--paper) 64rem);
+      line-height: 1.5;
+    }
+    button, textarea, input { font: inherit; }
+    button, label, input { -webkit-tap-highlight-color: transparent; }
+    a { color: var(--green); text-underline-offset: .18em; }
+    :focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+    .shell { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+    .hero { padding: 64px 0 34px; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border: 1px solid rgba(53, 103, 71, .25);
+      border-radius: 999px;
+      color: var(--green);
+      background: rgba(255, 253, 248, .75);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    h1 { max-width: 900px; margin: 20px 0 14px; font: 760 clamp(2.6rem, 7vw, 5.4rem)/.96 Georgia, serif; letter-spacing: -.045em; }
+    .lede { max-width: 790px; margin: 0; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.28rem); }
+    .meta { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 24px; }
+    .chip { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.55); font-size: .84rem; }
+    .chip.risk { color: #713514; border-color: #dfbd83; background: var(--amber-soft); font-weight: 750; }
+    section { padding: 28px 0; }
+    .section-head { display: grid; grid-template-columns: 1fr minmax(260px, 430px); gap: 24px; align-items: end; margin-bottom: 18px; }
+    h2 { margin: 0; font: 720 clamp(1.75rem, 4vw, 2.6rem)/1.05 Georgia, serif; letter-spacing: -.025em; }
+    .section-head p { margin: 0; color: var(--muted); }
+    .risk-note { padding: 18px 20px; border: 1px solid #dfbd83; border-left: 5px solid var(--amber); border-radius: 14px; background: var(--amber-soft); }
+    .risk-note strong { display: block; margin-bottom: 3px; }
+    .risk-note p { margin: 0; color: #68481d; }
+    .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .flow article { position: relative; min-height: 184px; padding: 18px; border: 1px solid var(--line); border-radius: 17px; background: var(--card); box-shadow: var(--shadow); overflow: hidden; }
+    .flow article::after { content: attr(data-step); position: absolute; right: 10px; bottom: -18px; color: rgba(32,37,31,.06); font: 800 5.8rem/1 Georgia, serif; }
+    .node { width: 38px; height: 7px; border-radius: 99px; background: var(--green); }
+    .flow article:nth-child(2) .node { background: var(--amber); }
+    .flow article:nth-child(3) .node { background: var(--red); }
+    .flow article:nth-child(4) .node { background: var(--blue); }
+    .flow article:nth-child(5) .node { background: #74527a; }
+    .flow h3 { margin: 18px 0 7px; font-size: 1rem; }
+    .flow p { margin: 0; color: var(--muted); font-size: .86rem; }
+    .rule { margin-top: 13px; padding: 16px 18px; border-left: 4px solid var(--green); border-radius: 0 13px 13px 0; background: var(--green-soft); font-weight: 680; }
+    .needs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .need { padding: 19px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+    .need b { display: block; margin-bottom: 6px; color: var(--green); font-size: 1.03rem; }
+    .need p { margin: 0; color: var(--muted); font-size: .9rem; }
+    .timeline { display: grid; grid-template-columns: 1fr; gap: 10px; counter-reset: phase; }
+    .phase { display: grid; grid-template-columns: 52px minmax(180px, .65fr) 1.35fr auto; gap: 16px; align-items: center; padding: 16px 18px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,253,248,.78); }
+    .phase::before { counter-increment: phase; content: "0" counter(phase); color: var(--red); font-weight: 850; letter-spacing: .08em; }
+    .phase h3 { margin: 0; font-size: 1rem; }
+    .phase p { margin: 0; color: var(--muted); font-size: .88rem; }
+    .badge { justify-self: end; padding: 5px 8px; border-radius: 999px; color: white; background: var(--green); font-size: .72rem; font-weight: 800; }
+    .badge.r2 { background: var(--blue); }
+    .decision-shell { padding: 24px; border: 1px solid #cec5b4; border-radius: 22px; background: #fffaf0; box-shadow: var(--shadow); }
+    .decision-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+    fieldset { min-width: 0; margin: 0; padding: 17px; border: 1px solid var(--line); border-radius: 15px; background: white; }
+    legend { max-width: 100%; padding: 0 6px; font-weight: 780; line-height: 1.25; }
+    .hint { margin: 6px 0 12px; color: var(--muted); font-size: .83rem; }
+    .option { display: grid; grid-template-columns: 21px 1fr; gap: 8px; align-items: start; margin: 7px 0; padding: 9px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; }
+    .option:hover { background: #f8f6ef; }
+    .option:has(input:checked) { border-color: rgba(53,103,71,.35); background: var(--green-soft); }
+    .option input { margin: 4px 0 0; accent-color: var(--green); }
+    .option strong { display: block; font-size: .89rem; }
+    .option small { display: block; margin-top: 1px; color: var(--muted); }
+    .recommended { color: var(--green); font-size: .7rem; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; }
+    .prompt-wrap { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .prompt-wrap label { display: block; margin-bottom: 8px; font-weight: 760; }
+    textarea { width: 100%; resize: vertical; padding: 12px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: white; }
+    #notes { min-height: 74px; margin-bottom: 13px; }
+    #prompt { min-height: 305px; font: .81rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; color: #f8f3e8; border-color: var(--ink); background: var(--ink); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+    button { min-height: 44px; padding: 9px 16px; border: 1px solid var(--green); border-radius: 10px; cursor: pointer; font-weight: 760; }
+    .primary { color: white; background: var(--green); }
+    .secondary { color: var(--green); background: transparent; }
+    #copy-status { min-height: 1.5em; color: var(--muted); font-size: .85rem; }
+    .guardrails { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .guardrail { padding: 17px 18px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,253,248,.72); }
+    .guardrail h3 { margin: 0 0 7px; font-size: 1rem; }
+    .guardrail p { margin: 0; color: var(--muted); font-size: .88rem; }
+    footer { padding: 34px 0 54px; color: var(--muted); font-size: .82rem; }
+    @media (max-width: 920px) {
+      .flow { grid-template-columns: repeat(2, 1fr); }
+      .decision-grid { grid-template-columns: 1fr; }
+      .section-head { grid-template-columns: 1fr; gap: 7px; }
+    }
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px, 1120px); }
+      .hero { padding-top: 36px; }
+      .flow, .needs, .guardrails { grid-template-columns: 1fr; }
+      .flow article { min-height: 148px; }
+      .phase { grid-template-columns: 42px 1fr auto; gap: 10px; }
+      .phase p { grid-column: 2 / -1; }
+      .decision-shell { padding: 12px; }
+      fieldset { padding: 14px 11px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print {
+      body { background: white; }
+      .actions, .prompt-wrap { display: none; }
+      .flow article, .decision-shell { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="shell">
+      <span class="eyebrow">Plan ready for review</span>
+      <h1>Make each shopping choice clear, saved, and safe.</h1>
+      <p class="lede">The plan joins whole-recipe portions, component-aware ingredients, weekly buys, recipe needs, alternatives, AI suggestions, and cooking progress without turning the app into a stock system or an ingredient catalogue.</p>
+      <div class="meta" aria-label="Plan facts">
+        <span class="chip">5 phases</span>
+        <span class="chip">21 tickets</span>
+        <span class="chip">No new service or package</span>
+        <span class="chip risk">R3: database snapshot and rollback drill</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="shell">
+        <div class="risk-note">
+          <strong>Four approvals split compatibility, migration, feature enablement, and cleanup.</strong>
+          <p>Running the plan approves only the compatibility release. Later approvals sit before the live migration, the R3 recipe-mutation release, and deletion of old compatibility code.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell">
+        <div class="section-head">
+          <h2>One source for each choice</h2>
+          <p>Choices happen before similar items merge. The final list and Albert Heijn still get one concrete Dutch product term.</p>
+        </div>
+        <div class="flow" aria-label="Shopping decision flow">
+          <article data-step="1"><div class="node"></div><h3>Recipe ingredient</h3><p>A stable ID and leaf/component label keep the choice tied to the right use, even when another part uses the same ingredient.</p></article>
+          <article data-step="2"><div class="node"></div><h3>This week's choice</h3><p>Include, skip, or choose a saved Dutch alternative without changing future cooks.</p></article>
+          <article data-step="3"><div class="node"></div><h3>Recipe choice</h3><p>An explicit Use in recipe action can save the new default and keep the old name as an alternative.</p></article>
+          <article data-step="4"><div class="node"></div><h3>Final list</h3><p>Component rows stay separate while cooking, then compatible Dutch amounts sum once after source choices.</p></article>
+          <article data-step="5"><div class="node"></div><h3>Albert Heijn</h3><p>A single-use preview token accepts only current Dutch terms and offered products. Uncertain pushes never retry themselves.</p></article>
+        </div>
+        <div class="rule">AI suggestions follow the same rule: generate a proposal, let the person accept and classify each item, then write the selected set in one checked update. Cook-mode AI interprets steps and merges; the app owns quantities, groups, progress, servings, and colors.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell">
+        <div class="section-head">
+          <h2>Added from the Dutch recording</h2>
+          <p>Each request now has its own observable ticket and rollback.</p>
+        </div>
+        <div class="needs">
+          <article class="need"><b>Whole recipe batches</b><p>Use ×1, ×2, ×3, or ×4 from the recipe's yield. Exact − and + controls stay available.</p></article>
+          <article class="need"><b>Component-aware ingredients</b><p>Keep crust and sauce butter separate while cooking, then buy one summed amount when units match.</p></article>
+          <article class="need"><b>Blended merge colors</b><p>Keep source labels, give the result a tested blend, and carry that color into later steps.</p></article>
+          <article class="need"><b>Less cook-mode AI work</b><p>Only recipe interpretation can call the model. Display and progress changes stay in code and cost nothing.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell">
+        <div class="section-head">
+          <h2>Three need states</h2>
+          <p>These labels separate recipe need from the household's buying habit.</p>
+        </div>
+        <div class="needs">
+          <article class="need"><b>Every time</b><p>The recipe needs it for each cook. Pasta and Parmesan fit here for the bolognese example.</p></article>
+          <article class="need"><b>Nice to have</b><p>The recipe still works without it. Basil, salad, and garlic bread can be reviewed here.</p></article>
+          <article class="need"><b>Usually stocked</b><p>The recipe needs it, but the household normally has it. Balsamic stays required without appearing every week.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell">
+        <div class="section-head">
+          <h2>Delivery order</h2>
+          <p>Identity and server checks come first. The visible work follows only after those boundaries pass their tests.</p>
+        </div>
+        <div class="timeline">
+          <article class="phase"><h3>Stable identities</h3><p>Ship split live/restore schemas first. Then add ingredient IDs, bounded week snapshots, legacy resolution, and push-attempt state; prove migration and rollback on copies.</p><span class="badge">R3</span></article>
+          <article class="phase"><h3>Shopping choices</h3><p>Add source-aware rows, Every week, legacy review, the three need states, and server-checked alternatives.</p><span class="badge r2">R2</span></article>
+          <article class="phase"><h3>Recipe enhancement</h3><p>Stage AI additions and substitutes from the recipe page or chat, then apply only selected items.</p><span class="badge r2">R2</span></article>
+          <article class="phase"><h3>Planning, cooking, and cards</h3><p>Add batch shortcuts, component sections, shared checks, blended merge colors, complete translation, and compact cards.</p><span class="badge r2">R2</span></article>
+          <article class="phase"><h3>Proof, approval, cleanup</h3><p>Run bolognese and two-butter cases, both rollbacks, and browser gates. Delete compatibility code only after approval.</p><span class="badge">R3</span></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="decisions">
+      <div class="shell">
+        <div class="section-head">
+          <h2>Choose the defaults</h2>
+          <p>The recommended picks are selected. Change them, add notes, then copy the prompt.</p>
+        </div>
+        <div class="decision-shell">
+          <div class="decision-grid">
+            <fieldset>
+              <legend>Recurring shopping tab</legend>
+              <p class="hint">The tab holds items that appear each week regardless of the meal plan.</p>
+              <label class="option"><input type="radio" name="tab" value="Every week" checked><span><strong>Every week <span class="recommended">Recommended</span></strong><small>Says when the item appears.</small></span></label>
+              <label class="option"><input type="radio" name="tab" value="Weekly"><span><strong>Weekly</strong><small>Shorter, but less plain.</small></span></label>
+              <label class="option"><input type="radio" name="tab" value="Repeat"><span><strong>Repeat</strong><small>Leaves room for other schedules later.</small></span></label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Alternative scope</legend>
+              <p class="hint">Choose pasta for the week without silently changing all future cooks.</p>
+              <label class="option"><input type="radio" name="alternative" value="This week first, separate Use in recipe" checked><span><strong>This week plus Use in recipe <span class="recommended">Recommended</span></strong><small>Weekly choice first; durable change stays explicit.</small></span></label>
+              <label class="option"><input type="radio" name="alternative" value="Always change the recipe"><span><strong>Always change recipe</strong><small>Faster, but a price or stock choice becomes permanent.</small></span></label>
+              <label class="option"><input type="radio" name="alternative" value="Never change the recipe here"><span><strong>Never change recipe here</strong><small>Safer, but adds a second editing trip.</small></span></label>
+            </fieldset>
+
+            <fieldset>
+              <legend>AI addition default</legend>
+              <p class="hint">The review sheet can change each suggestion before Apply.</p>
+              <label class="option"><input type="radio" name="ai" value="Nice to have" checked><span><strong>Nice to have <span class="recommended">Recommended</span></strong><small>Keeps AI additions non-required until reviewed.</small></span></label>
+              <label class="option"><input type="radio" name="ai" value="Every time"><span><strong>Every time</strong><small>Strong default for central ingredients.</small></span></label>
+              <label class="option"><input type="radio" name="ai" value="Usually stocked"><span><strong>Usually stocked</strong><small>Best only for pantry-style additions.</small></span></label>
+            </fieldset>
+          </div>
+
+          <div class="prompt-wrap">
+            <label for="notes">Notes for implementation</label>
+            <textarea id="notes" placeholder="Add a naming, behavior, or layout preference."></textarea>
+            <label for="prompt">Copy-ready starter prompt</label>
+            <textarea id="prompt" readonly></textarea>
+            <div class="actions">
+              <button class="primary" id="copy" type="button">Copy prompt</button>
+              <button class="secondary" id="reset" type="button">Reset picks</button>
+              <span id="copy-status" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell">
+        <div class="section-head">
+          <h2>Release guardrails</h2>
+          <p>These are stop conditions, not work to defer.</p>
+        </div>
+        <div class="guardrails">
+          <article class="guardrail"><h3>Migration proof</h3><p>Old ingredient fields and order must stay the same. A second migration run must change nothing. The compatibility release must edit and save migrated recipes without stripping IDs.</p></article>
+          <article class="guardrail"><h3>No legacy guesswork</h3><p>Ambiguous rows stay read-only until attached, converted to manual, or dismissed. Cleanup needs zero active unresolved rows or named exceptions.</p></article>
+          <article class="guardrail"><h3>No AH guesswork or blind retry</h3><p>A single-use token binds saved Dutch terms and offered products. Timeouts become uncertain attempts that never retry automatically.</p></article>
+          <article class="guardrail"><h3>No stale AI write</h3><p>A proposal belongs to one user, one recipe content revision, and a short time window. The AI edit tool cannot change ingredient arrays around this gate.</p></article>
+          <article class="guardrail"><h3>Bounded snapshots, fixed history</h3><p>Only the plan horizon, affected weeks, and first-read nonpast weeks materialize. Past snapshots stay fixed and removed sources retire.</p></article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">Authoritative source: docs/feature-lists/FEATURE_LIST_SHOPPING_RECIPE_DECISIONS.md</div>
+  </footer>
+
+  <script>
+    (() => {
+      const storageKey = 'shopping-recipe-decisions-plan-v2';
+      const prompt = document.querySelector('#prompt');
+      const notes = document.querySelector('#notes');
+      const status = document.querySelector('#copy-status');
+      const groups = ['tab', 'alternative', 'ai'];
+
+      function selected(name) {
+        return document.querySelector(`input[name="${name}"]:checked`)?.value || '';
+      }
+
+      function save() {
+        const state = { tab: selected('tab'), alternative: selected('alternative'), ai: selected('ai'), notes: notes.value };
+        try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch (_) { /* Storage is optional. */ }
+      }
+
+      function render() {
+        const extra = notes.value.trim() ? `\nNotes: ${notes.value.trim()}` : '';
+        prompt.value = `Continue: Execute plan Shopping and Recipe Decisions. Load docs/feature-lists/FEATURE_LIST_SHOPPING_RECIPE_DECISIONS.md, then /run.\nState: Plan ready at R3 across five phases and twenty-one tickets; Gate A authorizes the compatibility release only.\nDecisions:\n- Recurring tab: ${selected('tab')}\n- Alternative scope: ${selected('alternative')}\n- AI addition default: ${selected('ai')}${extra}`;
+        save();
+      }
+
+      function restore() {
+        try {
+          const state = JSON.parse(localStorage.getItem(storageKey) || 'null');
+          if (!state) return;
+          groups.forEach((name) => {
+            const choice = [...document.querySelectorAll(`input[name="${name}"]`)].find((input) => input.value === state[name]);
+            if (choice) choice.checked = true;
+          });
+          notes.value = state.notes || '';
+        } catch (_) { /* Use the selected defaults. */ }
+      }
+
+      document.querySelectorAll('input[type="radio"]').forEach((input) => input.addEventListener('change', render));
+      notes.addEventListener('input', render);
+      document.querySelector('#reset').addEventListener('click', () => {
+        document.querySelector('input[name="tab"][value="Every week"]').checked = true;
+        document.querySelector('input[name="alternative"][value="This week first, separate Use in recipe"]').checked = true;
+        document.querySelector('input[name="ai"][value="Nice to have"]').checked = true;
+        notes.value = '';
+        try { localStorage.removeItem(storageKey); } catch (_) { /* Storage is optional. */ }
+        status.textContent = 'Defaults restored.';
+        render();
+      });
+      document.querySelector('#copy').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(prompt.value);
+          status.textContent = 'Prompt copied.';
+        } catch (_) {
+          prompt.focus();
+          prompt.select();
+          status.textContent = 'Clipboard access failed. The prompt is selected for copying.';
+        }
+      });
+
+      restore();
+      render();
+    })();
+  </script>
+</body>
+</html>
