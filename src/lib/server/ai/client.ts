@@ -20,7 +20,9 @@ export class DailyCapExceeded extends Error {
 // one source of truth — e.g. the chat route checks 'chat' and spends the chat
 // model; translate checks 'background' and spends the background model. The P5
 // provider seam will fold gate+call+log into one wrapper so category can't drift.
-export function checkDailyCap(category: SpendCategory = 'chat'): { exceeded: boolean; totalEur: number } {
+export function checkDailyCap(
+	category: SpendCategory = 'chat'
+): { exceeded: boolean; totalEur: number; capEur: number } {
 	const today = todayIso();
 	const rows = db
 		.select({ model: spending.model, costEur: spending.costEur })
@@ -33,7 +35,8 @@ export function checkDailyCap(category: SpendCategory = 'chat'): { exceeded: boo
 	const totalEur = rows
 		.filter((r) => categoryForConfiguredModel(r.model, backgroundModel) === category)
 		.reduce((acc, r) => acc + r.costEur, 0);
-	return { exceeded: totalEur >= getCap(category).value, totalEur };
+	const capEur = getCap(category).value;
+	return { exceeded: totalEur >= capEur, totalEur, capEur };
 }
 
 // costUsdOverride: OpenRouter reports usage.cost per response — pass it here so the

@@ -86,3 +86,13 @@ Touched: docs/artifacts/2026-07-23-ui-ux-chat-assistant.html, docs/feature-lists
 ## 2026-07-23 | shipped | chat assistant chrome and timer coexistence
 
 Shipped distinct navigation/AI quick actions, 44 px assistant controls, persistent composer and status semantics, unified Assistant naming, timer/panel collision handling, and browser-background alarm media. Physical iPhone and Android locked-screen verification remains open.
+
+## 2026-07-23 | html-artifact | post-ship audit: assistant bubble and chat
+
+Touched: docs/artifacts/2026-07-23-ui-ux-chat-assistant.html, docs/feature-lists/FEATURE_LIST_UI_CHAT_ASSISTANT.md, docs/feature-lists/FEATURE_LIST_UX_ASSISTANT_CHAT.md, docs/feature-lists/FEATURE_LIST_UX_CHAT_ASSISTANT_AND_TIMER.md
+
+## 2026-07-23 | shipped | full assistant bubble and chat UX/UI
+
+Shipped all 21 UX/UI findings and the three recommended defaults: distinct contextual/history entry roles, disclosed one-shot photos, and short reduced-motion-safe dialog transitions. Added live configured-cap recovery, durable interrupted-turn retry, recent-history boundaries, reversible context, destination-revealing navigation, localized server copy, safe focus recovery, settled launcher placement, non-overlapping attachments, 44 px actions, and 16 px conversation text. Verification passed with Svelte checks, 413 unit tests, production build, and English/Dutch browser stories at 375, 768, 1280, and 1536 px without provider spend.
+
+## [2026-07-23 22:18] archive-scan | 2 feature lists, 1 HTML archived

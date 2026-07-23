@@ -7,6 +7,7 @@ import { executeToolCall, isOk } from '$lib/server/ai/executors';
 import { buildToolDisplay } from '$lib/server/ai/tool_display';
 import { PreconditionConflictError } from '$lib/server/inventory_writes';
 import { readJsonBody } from '$lib/server/api_body';
+import { getLocale } from '$lib/paraglide/runtime';
 
 const ConfirmSchema = z.object({ confirmation_id: z.string() });
 
@@ -20,6 +21,7 @@ const ConfirmSchema = z.object({ confirmation_id: z.string() });
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
 	const user = locals.user;
+	const locale = getLocale() === 'nl' ? 'nl' : 'en';
 
 	const { confirmation_id } = await readJsonBody(request, ConfirmSchema);
 
@@ -32,7 +34,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	try {
 		const result = await executeToolCall(action.toolName, action.args, db, user.id, undefined, action.precondition);
-		const display = buildToolDisplay(db, action.toolName, action.args, result);
+		const display = buildToolDisplay(db, action.toolName, action.args, result, locale);
 		if (!isOk(result)) {
 			// Soft failure (e.g. the item was already gone) — surface it as a
 			// non-fatal conflict the card can render.

@@ -1,6 +1,7 @@
 import { base } from '$app/paths';
 import { invalidateAll } from '$app/navigation';
 import { m } from '$lib/paraglide/messages';
+import { getLocale } from '$lib/paraglide/runtime';
 import type { ChatActionV1 } from '$lib/chat/actions';
 import type { ScreenContextV1 } from '$lib/chat/screen_context';
 import type { ToolDisplay } from '$lib/tool_display';
@@ -39,6 +40,15 @@ type HydratedMessage = {
 	toolCalls?: unknown;
 	createdAt?: Date | string;
 	at?: Date | string;
+	errorCode?: 'interrupted_turn';
+};
+
+type HydrationOptions = {
+	input?: string;
+	capExceeded?: boolean;
+	capEur?: number;
+	hasOlder?: boolean;
+	visibleLimit?: number;
 };
 
 const MAX_IMAGES = 2;
@@ -52,6 +62,9 @@ export class ChatAgentController {
 	input = $state('');
 	isStreaming = $state(false);
 	capExceeded = $state(false);
+	capEur = $state(0.5);
+	historyHasOlder = $state(false);
+	historyVisibleLimit = $state(20);
 	attachments = $state<ChatAttachment[]>([]);
 	attachError = $state('');
 	opened = $state(false);
@@ -70,28 +83,34 @@ export class ChatAgentController {
 	private readonly publishers = new Map<symbol, { snapshot: ScreenContextV1; fallback: boolean }>();
 	private returnFocus: HTMLElement | null = null;
 	private invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+	private availabilityTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(username: string) {
 		this.username = username;
 	}
 
-	hydrateOnce(
-		initialMessages: HydratedMessage[],
-		options?: { input?: string; capExceeded?: boolean }
-	): void {
-		if (this.hydrated) {
-			if (options?.input && !this.input) this.input = options.input;
-			return;
-		}
-		this.messages = initialMessages.map((message) => ({
+	private hydratedMessage(message: HydratedMessage): ChatMessage {
+		return {
 			role: message.role,
 			content: message.content,
 			toolCalls: (message.toolCalls ?? null) as ChatToolCall[] | null,
 			at: new Date(message.at ?? message.createdAt ?? Date.now()),
-			hydrated: true
-		}));
+			hydrated: true,
+			error: message.errorCode === 'interrupted_turn' ? m.chat_error_interrupted_turn() : undefined
+		};
+	}
+
+	hydrateOnce(initialMessages: HydratedMessage[], options?: HydrationOptions): void {
+		if (options?.capExceeded !== undefined) this.capExceeded = options.capExceeded;
+		if (options?.capEur !== undefined) this.capEur = options.capEur;
+		if (options?.hasOlder !== undefined) this.historyHasOlder = options.hasOlder;
+		if (options?.visibleLimit !== undefined) this.historyVisibleLimit = options.visibleLimit;
+		if (this.hydrated) {
+			if (options?.input && !this.input) this.input = options.input;
+			return;
+		}
+		this.messages = initialMessages.map((message) => this.hydratedMessage(message));
 		this.input = options?.input ?? this.input;
-		this.capExceeded = options?.capExceeded ?? this.capExceeded;
 		this.hydrated = true;
 	}
 
@@ -105,7 +124,12 @@ export class ChatAgentController {
 				const response = await fetch(`${base}/api/chat/history`);
 				if (!response.ok) throw new Error('history request failed');
 				const data = await response.json();
-				this.hydrateOnce(data.messages ?? [], { capExceeded: data.capExceeded === true });
+				this.hydrateOnce(data.messages ?? [], {
+					capExceeded: data.capExceeded === true,
+					capEur: typeof data.capEur === 'number' ? data.capEur : undefined,
+					hasOlder: data.hasOlder === true,
+					visibleLimit: typeof data.visibleLimit === 'number' ? data.visibleLimit : undefined
+				});
 			} catch {
 				this.hydrationError = true;
 			} finally {
@@ -116,18 +140,72 @@ export class ChatAgentController {
 		return this.hydrationPromise;
 	}
 
+	async refreshStatus(): Promise<void> {
+		if (!this.hydrated) return this.ensureHydrated();
+		try {
+			const response = await fetch(`${base}/api/chat/history`);
+			if (!response.ok) return;
+			const data = await response.json();
+			const incoming = (data.messages ?? []) as HydratedMessage[];
+			if (!this.isStreaming && incoming.length > 0) {
+				if (this.messages.length === 0) {
+					this.messages = incoming.map((message) => this.hydratedMessage(message));
+				} else {
+					const localLast = this.messages.at(-1);
+					const incomingLast = incoming.at(-1);
+					const incomingPrevious = incoming.at(-2);
+					if (
+						localLast?.role === 'user' &&
+						incomingLast?.role === 'assistant' &&
+						incomingPrevious?.role === 'user' &&
+						localLast.content === incomingPrevious.content
+					) {
+						this.messages.push(this.hydratedMessage(incomingLast));
+					}
+				}
+			}
+			this.hydrateOnce([], {
+				capExceeded: data.capExceeded === true,
+				capEur: typeof data.capEur === 'number' ? data.capEur : undefined,
+				hasOlder: data.hasOlder === true,
+				visibleLimit: typeof data.visibleLimit === 'number' ? data.visibleLimit : undefined
+			});
+		} catch {
+			// The existing conversation stays usable if a background status refresh
+			// fails. A send still receives the authoritative server cap response.
+		}
+	}
+
+	private scheduleAvailabilityRefresh(): void {
+		if (this.availabilityTimer) clearTimeout(this.availabilityTimer);
+		const now = new Date();
+		const nextMidnight = new Date(now);
+		nextMidnight.setHours(24, 0, 1, 0);
+		this.availabilityTimer = setTimeout(async () => {
+			this.availabilityTimer = null;
+			await this.refreshStatus();
+			if (this.opened) this.scheduleAvailabilityRefresh();
+		}, Math.max(1000, nextMidnight.getTime() - now.getTime()));
+	}
+
 	open(options?: { draft?: string }): void {
 		if (typeof document !== 'undefined') this.returnFocus = document.activeElement as HTMLElement | null;
 		if (options?.draft !== undefined) this.input = options.draft;
 		this.opened = true;
 		this.unread = 0;
 		this.focusRequest += 1;
-		void this.ensureHydrated();
+		if (this.hydrated) void this.refreshStatus();
+		else void this.ensureHydrated();
+		this.scheduleAvailabilityRefresh();
 	}
 
-	close(): void {
+	close(options?: { restoreFocus?: boolean }): void {
 		this.opened = false;
-		this.returnFocus?.focus();
+		if (this.availabilityTimer) {
+			clearTimeout(this.availabilityTimer);
+			this.availabilityTimer = null;
+		}
+		if (options?.restoreFocus !== false) this.returnFocus?.focus();
 		this.returnFocus = null;
 	}
 
@@ -152,8 +230,8 @@ export class ChatAgentController {
 		this.screenContext = (entries.filter((e) => !e.fallback).at(-1) ?? entries.at(-1))?.snapshot;
 	}
 
-	removeContext(): void {
-		this.contextEnabled = false;
+	setContextEnabled(enabled: boolean): void {
+		this.contextEnabled = enabled;
 	}
 
 	private async loadImage(file: File): Promise<HTMLImageElement> {
@@ -321,6 +399,7 @@ export class ChatAgentController {
 		// one-time history load settle first; otherwise hydrateOnce can replace the
 		// just-appended optimistic turn with the older server snapshot.
 		if (!this.hydrated) await this.ensureHydrated();
+		if (this.capExceeded) return;
 		// A bound UI action is text/data-only. Do not accidentally consume a photo
 		// or draft the user had staged in the regular composer.
 		const outgoing = action ? [] : this.attachments;
@@ -406,6 +485,7 @@ export class ChatAgentController {
 						result?: unknown;
 						code?: string;
 						message?: string;
+						capEur?: number;
 						id?: string;
 						summary?: string;
 						display?: ToolDisplay | null;
@@ -448,7 +528,8 @@ export class ChatAgentController {
 					} else if (event.type === 'error') {
 						if (event.code === 'cap_exceeded') {
 							this.capExceeded = true;
-							last.error = m.chat_cap_error();
+							if (typeof event.capEur === 'number') this.capEur = event.capEur;
+							last.error = m.chat_cap_error({ amount: this.formatCap() });
 						} else if (event.code === 'turn_too_large') last.error = m.chat_error_too_large();
 						else last.error = event.message ?? m.chat_error_generic_short();
 					}
@@ -495,11 +576,21 @@ export class ChatAgentController {
 	destroy(): void {
 		this.abortController?.abort();
 		if (this.invalidateTimer) clearTimeout(this.invalidateTimer);
+		if (this.availabilityTimer) clearTimeout(this.availabilityTimer);
 		for (const attachment of this.attachments) URL.revokeObjectURL(attachment.url);
 		for (const message of this.messages) {
 			for (const url of message.images ?? []) URL.revokeObjectURL(url);
 		}
 		this.attachments = [];
+	}
+
+	formatCap(): string {
+		return new Intl.NumberFormat(getLocale() === 'nl' ? 'nl-NL' : 'en-IE', {
+			style: 'currency',
+			currency: 'EUR',
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		}).format(this.capEur);
 	}
 }
 

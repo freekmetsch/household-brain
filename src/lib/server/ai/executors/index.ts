@@ -44,7 +44,9 @@ export async function executeToolCall(
 		inp.needs_review = true;
 		if (typeof inp.review_reason !== 'string' || !inp.review_reason.trim()) {
 			inp.review_reason =
-				'Extracted from a photo — double-check quantities, timings, and ingredient names.';
+				turnCtx.locale === 'nl'
+					? 'Uit een foto gehaald — controleer hoeveelheden, tijden en namen van ingrediënten.'
+					: 'Extracted from a photo — double-check quantities, timings, and ingredient names.';
 		}
 	}
 

@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />
+	<title>Assistant bubble and chat — UX/UI decision board</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--paper: #fbf8f1;
+			--surface: #fffdf8;
+			--ink: #2b241f;
+			--muted: #6d6259;
+			--line: #ded4c7;
+			--primary: #ad3f13;
+			--primary-soft: #f9e8df;
+			--p1: #9f251b;
+			--p1-soft: #fbe8e6;
+			--p2: #9a5a00;
+			--p2-soft: #fff0d6;
+			--p3: #456358;
+			--p3-soft: #e7f0ec;
+			--ok: #2e6b4d;
+			--shadow: 0 18px 50px rgb(56 39 25 / 0.09);
+			--radius: 18px;
+		}
+		* { box-sizing: border-box; }
+		html { background: var(--paper); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+		body { margin: 0; }
+		button, input, textarea { font: inherit; }
+		button, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
+		a { color: var(--primary); text-underline-offset: 0.18em; }
+		.skip {
+			position: fixed;
+			left: 1rem;
+			top: -4rem;
+			z-index: 20;
+			padding: 0.7rem 1rem;
+			border-radius: 999px;
+			background: var(--ink);
+			color: white;
+		}
+		.skip:focus { top: 1rem; }
+		header {
+			padding: clamp(2.5rem, 8vw, 6rem) max(1rem, calc((100vw - 1180px) / 2));
+			background:
+				radial-gradient(circle at 85% 10%, rgb(173 63 19 / 0.12), transparent 28rem),
+				linear-gradient(145deg, #fffaf2, #f8f0e5);
+			border-bottom: 1px solid var(--line);
+		}
+		.eyebrow {
+			margin: 0 0 1rem;
+			font-size: 0.78rem;
+			font-weight: 800;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: var(--primary);
+		}
+		h1 {
+			max-width: 780px;
+			margin: 0;
+			font-family: Georgia, "Times New Roman", serif;
+			font-size: clamp(2.35rem, 6vw, 5rem);
+			font-weight: 500;
+			line-height: 0.98;
+			letter-spacing: -0.035em;
+		}
+		.lede {
+			max-width: 760px;
+			margin: 1.4rem 0 0;
+			font-size: clamp(1.05rem, 2vw, 1.28rem);
+			line-height: 1.55;
+			color: var(--muted);
+		}
+		.score {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 0.75rem;
+			max-width: 720px;
+			margin-top: 2rem;
+		}
+		.score div {
+			padding: 1rem;
+			border: 1px solid var(--line);
+			border-radius: 14px;
+			background: rgb(255 253 248 / 0.82);
+		}
+		.score strong { display: block; font-size: 1.55rem; }
+		.score span { color: var(--muted); font-size: 0.88rem; }
+		main {
+			width: min(1180px, calc(100% - 2rem));
+			margin: 0 auto;
+			padding: 2rem 0 5rem;
+		}
+		nav {
+			position: sticky;
+			top: 0.75rem;
+			z-index: 10;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.4rem;
+			width: fit-content;
+			max-width: 100%;
+			margin: 0 0 2rem;
+			padding: 0.45rem;
+			border: 1px solid var(--line);
+			border-radius: 999px;
+			background: rgb(255 253 248 / 0.94);
+			box-shadow: 0 8px 28px rgb(56 39 25 / 0.08);
+			backdrop-filter: blur(12px);
+		}
+		nav a {
+			padding: 0.55rem 0.8rem;
+			border-radius: 999px;
+			color: var(--ink);
+			font-size: 0.86rem;
+			font-weight: 700;
+			text-decoration: none;
+		}
+		nav a:hover, nav a:focus-visible { background: var(--primary-soft); outline: none; }
+		section { scroll-margin-top: 5rem; margin-top: 2.5rem; }
+		.section-heading {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: end;
+			gap: 1rem;
+			margin-bottom: 1rem;
+		}
+		h2 {
+			margin: 0;
+			font-family: Georgia, "Times New Roman", serif;
+			font-size: clamp(1.75rem, 4vw, 2.8rem);
+			font-weight: 500;
+			letter-spacing: -0.025em;
+		}
+		.section-heading p { max-width: 520px; margin: 0; color: var(--muted); line-height: 1.5; }
+		.callout {
+			display: grid;
+			grid-template-columns: 8px minmax(0, 1fr);
+			overflow: hidden;
+			border: 1px solid var(--line);
+			border-radius: var(--radius);
+			background: var(--surface);
+			box-shadow: var(--shadow);
+		}
+		.callout::before { content: ""; background: var(--primary); }
+		.callout > div { padding: clamp(1.2rem, 3vw, 2rem); }
+		.callout h3 { margin: 0 0 0.55rem; font-size: 1.2rem; }
+		.callout p { max-width: 850px; margin: 0; color: var(--muted); line-height: 1.6; }
+		.lanes {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 1rem;
+		}
+		.lane {
+			border: 1px solid var(--line);
+			border-radius: var(--radius);
+			background: var(--surface);
+			box-shadow: 0 12px 35px rgb(56 39 25 / 0.06);
+		}
+		.lane > header {
+			padding: 1rem 1.1rem;
+			background: none;
+			border-bottom: 1px solid var(--line);
+		}
+		.lane > header h3 { margin: 0; font-size: 1rem; }
+		.lane > header p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.86rem; }
+		.fix-list { display: grid; gap: 0; }
+		.fix {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			gap: 0.8rem;
+			padding: 1rem 1.1rem;
+			border-bottom: 1px solid var(--line);
+		}
+		.fix:last-child { border-bottom: 0; }
+		.fix input { width: 1.15rem; height: 1.15rem; margin: 0.18rem 0 0; accent-color: var(--primary); }
+		.fix h4 { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0; font-size: 0.98rem; }
+		.fix p { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.9rem; line-height: 1.52; }
+		.meta { margin-top: 0.55rem; font-size: 0.78rem; color: var(--muted); }
+		.badge {
+			display: inline-flex;
+			align-items: center;
+			min-height: 1.45rem;
+			padding: 0.1rem 0.5rem;
+			border-radius: 999px;
+			font-size: 0.72rem;
+			font-weight: 800;
+		}
+		.p1 { background: var(--p1-soft); color: var(--p1); }
+		.p2 { background: var(--p2-soft); color: var(--p2); }
+		.p3 { background: var(--p3-soft); color: var(--p3); }
+		.note {
+			width: 100%;
+			min-height: 4.8rem;
+			margin-top: 0.75rem;
+			padding: 0.7rem;
+			resize: vertical;
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			background: #fffefb;
+			color: var(--ink);
+		}
+		.note:focus-visible, .prompt:focus-visible, button:focus-visible, input:focus-visible {
+			outline: 3px solid rgb(173 63 19 / 0.35);
+			outline-offset: 2px;
+		}
+		details.polish {
+			border: 1px solid var(--line);
+			border-radius: var(--radius);
+			background: var(--surface);
+		}
+		details.polish > summary {
+			padding: 1rem 1.1rem;
+			font-weight: 800;
+			cursor: pointer;
+		}
+		details.polish .fix-list { border-top: 1px solid var(--line); }
+		.decisions {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 1rem;
+		}
+		.decision {
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+			padding: 1.1rem;
+			border: 1px solid var(--line);
+			border-radius: var(--radius);
+			background: var(--surface);
+			box-shadow: 0 12px 35px rgb(56 39 25 / 0.06);
+		}
+		.decision .number {
+			width: 2rem;
+			height: 2rem;
+			display: grid;
+			place-items: center;
+			border-radius: 50%;
+			background: var(--primary);
+			color: white;
+			font-weight: 800;
+		}
+		.decision h3 { margin: 0.8rem 0 0.45rem; font-size: 1.1rem; }
+		.decision > p { margin: 0 0 0.8rem; color: var(--muted); font-size: 0.9rem; line-height: 1.52; }
+		.options { display: grid; gap: 0.55rem; }
+		.option {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			gap: 0.55rem;
+			padding: 0.7rem;
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			background: #fffefb;
+		}
+		.option:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+		.option input { width: 1rem; height: 1rem; margin-top: 0.15rem; accent-color: var(--primary); }
+		.option strong { display: block; font-size: 0.88rem; }
+		.option small { display: block; margin-top: 0.2rem; color: var(--muted); line-height: 1.4; }
+		.recommend {
+			display: inline-flex;
+			margin-left: 0.3rem;
+			color: var(--ok);
+			font-size: 0.7rem;
+			font-weight: 800;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+		}
+		.decision .note { margin-top: auto; }
+		.evidence {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.75rem;
+		}
+		.evidence article {
+			padding: 1rem;
+			border: 1px solid var(--line);
+			border-radius: 14px;
+			background: var(--surface);
+		}
+		.evidence h3 { margin: 0 0 0.35rem; font-size: 0.95rem; }
+		.evidence p { margin: 0; color: var(--muted); font-size: 0.86rem; line-height: 1.45; overflow-wrap: anywhere; }
+		.output {
+			padding: 1.1rem;
+			border: 1px solid var(--line);
+			border-radius: var(--radius);
+			background: #28231f;
+			color: #fff9ef;
+			box-shadow: var(--shadow);
+		}
+		.output-head {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+			margin-bottom: 0.75rem;
+		}
+		.output h3 { margin: 0; font-size: 1rem; }
+		.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+		.btn {
+			min-height: 2.75rem;
+			padding: 0.6rem 0.9rem;
+			border: 1px solid rgb(255 255 255 / 0.2);
+			border-radius: 999px;
+			background: #fff9ef;
+			color: #28231f;
+			font-weight: 800;
+		}
+		.btn.secondary { background: transparent; color: #fff9ef; }
+		.prompt {
+			width: 100%;
+			min-height: 20rem;
+			padding: 1rem;
+			resize: vertical;
+			border: 1px solid rgb(255 255 255 / 0.25);
+			border-radius: 12px;
+			background: #171411;
+			color: #fff9ef;
+			font: 0.84rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		}
+		.save-state { margin: 0.7rem 0 0; color: #d8cfc4; font-size: 0.82rem; }
+		.source-links { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
+		.source-links a {
+			padding: 0.55rem 0.75rem;
+			border: 1px solid var(--line);
+			border-radius: 999px;
+			background: var(--surface);
+			font-size: 0.85rem;
+			font-weight: 700;
+			text-decoration: none;
+		}
+		@media (max-width: 900px) {
+			.lanes, .decisions { grid-template-columns: 1fr; }
+			.decision .note { margin-top: 0.75rem; }
+		}
+		@media (max-width: 620px) {
+			.score, .evidence { grid-template-columns: 1fr; }
+			.section-heading { grid-template-columns: 1fr; align-items: start; }
+			nav { border-radius: 18px; }
+			nav a { flex: 1 1 auto; text-align: center; }
+			.output-head { align-items: flex-start; flex-direction: column; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			*, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+		}
+	</style>
+</head>
+<body>
+	<a class="skip" href="#main">Skip to audit board</a>
+	<header>
+		<p class="eyebrow">Shipped audit · 23 July 2026</p>
+		<h1>Make the assistant’s state tell the truth.</h1>
+		<p class="lede">
+			The normal chat path is strong. The remaining risk sits at state changes: opening a screen,
+			hitting a spend cap, recovering a failed turn, restoring context, and revealing the launcher
+			where the user left it.
+		</p>
+		<div class="score" aria-label="Finding totals">
+			<div><strong>6</strong><span>unique release-blocking P1 packages</span></div>
+			<div><strong>10</strong><span>P2 findings across UX and UI</span></div>
+			<div><strong>3</strong><span>product choices with recommended defaults</span></div>
+		</div>
+	</header>
+
+	<main id="main">
+		<nav aria-label="Audit sections">
+			<a href="#gate">Release gate</a>
+			<a href="#decisions">Decisions</a>
+			<a href="#polish">Polish</a>
+			<a href="#evidence">Evidence</a>
+			<a href="#handoff">Handoff</a>
+		</nav>
+
+		<section aria-labelledby="outcome-title">
+			<div class="callout">
+				<div>
+					<h3 id="outcome-title">Implementation shipped</h3>
+					<p>
+						Ship the state-integrity fixes as one assistant reliability package before further
+						assistant features. The first pass should close mobile navigation, refresh cap state in
+						both directions, preserve failed-turn recovery, stabilize the launcher before paint, and
+						remove attachment overlap. Keep photos one-shot, but say so.
+					</p>
+				</div>
+			</div>
+		</section>
+
+		<section id="gate" aria-labelledby="gate-title">
+			<div class="section-heading">
+				<h2 id="gate-title">Release gate</h2>
+				<p>P1 and P2 packages are selected by default. Uncheck only when intentionally excluding work from the next run.</p>
+			</div>
+			<div class="lanes">
+				<article class="lane">
+					<header>
+						<h3>P1 · user-visible breakage</h3>
+						<p>These states look stuck, false, or visibly broken.</p>
+					</header>
+					<div class="fix-list" id="p1-list"></div>
+				</article>
+				<article class="lane">
+					<header>
+						<h3>P2 · avoidable friction</h3>
+						<p>These require unnecessary thought or invite mis-taps.</p>
+					</header>
+					<div class="fix-list" id="p2-list"></div>
+				</article>
+			</div>
+		</section>
+
+		<section id="decisions" aria-labelledby="decisions-title">
+			<div class="section-heading">
+				<h2 id="decisions-title">Three real choices</h2>
+				<p>Each recommendation is preselected. The technical fixes above do not need product approval.</p>
+			</div>
+			<div class="decisions" id="decision-list"></div>
+		</section>
+
+		<section id="polish" aria-labelledby="polish-title">
+			<div class="section-heading">
+				<h2 id="polish-title">Polish after correctness</h2>
+				<p>P3 work is collapsed and excluded by default so it cannot displace the release gate.</p>
+			</div>
+			<details class="polish">
+				<summary>Show optional P3 packages</summary>
+				<div class="fix-list" id="p3-list"></div>
+			</details>
+		</section>
+
+		<section id="evidence" aria-labelledby="evidence-title">
+			<div class="section-heading">
+				<h2 id="evidence-title">Evidence map</h2>
+				<p>The Markdown plans remain authoritative. These paths make each recommendation reproducible.</p>
+			</div>
+			<div class="evidence">
+				<article>
+					<h3>Mobile route hidden by chat</h3>
+					<p>output/playwright/20260723-ux-assistant-open-screen-obscured-375.png</p>
+				</article>
+				<article>
+					<h3>Cap controls disagree</h3>
+					<p>output/playwright/20260723-ui-assistant-cap-exceeded-375.png → 20260723-ux-assistant-cap-quick-action-375.png</p>
+				</article>
+				<article>
+					<h3>Cap stays stale after navigation</h3>
+					<p>output/playwright/20260723-ux-assistant-cap-stale-after-navigation-375.png</p>
+				</article>
+				<article>
+					<h3>Failure loses Retry</h3>
+					<p>output/playwright/20260723-ui-assistant-error-375.png → 20260723-ui-assistant-dialog-open-375.png</p>
+				</article>
+				<article>
+					<h3>Attachment controls collide</h3>
+					<p>output/playwright/20260723-ui-assistant-attachments-375.png</p>
+				</article>
+				<article>
+					<h3>Launcher relocates after paint</h3>
+					<p>output/playwright/20260723-ui-assistant-bubble-fresh-0ms-375.png → …fresh-100ms-375.png</p>
+				</article>
+				<article>
+					<h3>Context cannot be restored</h3>
+					<p>output/playwright/20260723-ux-assistant-context-removed-375.png → …context-still-removed-375.png</p>
+				</article>
+				<article>
+					<h3>Healthy states covered</h3>
+					<p>Success, loading, Stop, confirmation, Cancel, Undo, dark mode, long history, multiline input, 375/768/1280/1536.</p>
+				</article>
+			</div>
+			<div class="source-links">
+				<a href="../../feature-lists/archive/FEATURE_LIST_UX_ASSISTANT_CHAT.md">Open archived UX source</a>
+				<a href="../../feature-lists/archive/FEATURE_LIST_UI_CHAT_ASSISTANT.md">Open archived UI source</a>
+			</div>
+		</section>
+
+		<section id="handoff" aria-labelledby="handoff-title">
+			<div class="section-heading">
+				<h2 id="handoff-title">Generated handoff</h2>
+				<p>Selections and notes are saved in this browser. The prompt points the next agent to Markdown, never back to this artifact.</p>
+			</div>
+			<div class="output">
+				<div class="output-head">
+					<h3>Paste-ready implementation prompt</h3>
+					<div class="actions">
+						<button type="button" class="btn" id="copy">Copy prompt</button>
+						<button type="button" class="btn secondary" id="reset">Reset choices</button>
+					</div>
+				</div>
+				<textarea class="prompt" id="prompt" readonly aria-label="Generated implementation prompt"></textarea>
+				<p class="save-state" id="save-state" role="status" aria-live="polite">Choices save locally in this browser.</p>
+			</div>
+		</section>
+	</main>
+
+	<script>
+		const ARTIFACT_PATH = 'docs/artifacts/archive/2026-07-23-ui-ux-chat-assistant.html';
+		const STORAGE_KEY = ARTIFACT_PATH + '::v2';
+		const sources = [
+			'docs/feature-lists/archive/FEATURE_LIST_UX_ASSISTANT_CHAT.md',
+			'docs/feature-lists/archive/FEATURE_LIST_UI_CHAT_ASSISTANT.md'
+		];
+
+		const fixes = [
+			{
+				id: 'nav-reveal',
+				priority: 'P1',
+				title: 'Reveal screens opened from the phone agent',
+				reason: 'Close the full-screen agent before navigation and focus the destination heading. Today the route changes behind the dialog.',
+				source: 'UX-01 / UI-05',
+				evidence: '20260723-ux-assistant-open-screen-obscured-375.png',
+				effort: 'S'
+			},
+			{
+				id: 'cap-live',
+				priority: 'P1',
+				title: 'Make cap availability live and bidirectional',
+				reason: 'Refresh true and false states after navigation, Settings changes, and midnight. A false server value must unlock the current session.',
+				source: 'UX-02',
+				evidence: '20260723-ux-assistant-cap-stale-after-navigation-375.png',
+				effort: 'M'
+			},
+			{
+				id: 'cap-gate',
+				priority: 'P1',
+				title: 'Gate every AI trigger when chat is unavailable',
+				reason: 'Disable both Ask chips and guard controller.send(), matching the already-disabled composer and attachment control.',
+				source: 'UX-04 / UI-03',
+				evidence: '20260723-ui-assistant-cap-exceeded-375.png',
+				effort: 'XS'
+			},
+			{
+				id: 'launcher-settle',
+				priority: 'P1',
+				title: 'Set launcher position before revealing it',
+				reason: 'Load, clamp, and collision-settle the saved position while hidden; reveal with the micro opacity transition.',
+				source: 'UI-01',
+				evidence: '20260723-ui-assistant-bubble-fresh-0ms-375.png → …100ms-375.png',
+				effort: 'S'
+			},
+			{
+				id: 'attachments',
+				priority: 'P1',
+				title: 'Stop photo removal controls from overlapping',
+				reason: 'Place independent 44 × 44 targets inside or beside each thumbnail with enough spacing for two photos.',
+				source: 'UI-02 / UX-09',
+				evidence: '20260723-ui-assistant-attachments-375.png',
+				effort: 'S'
+			},
+			{
+				id: 'mobile-motion',
+				priority: 'P1',
+				title: 'Give the phone dialog a real entrance and exit',
+				reason: 'Use existing motion tokens and wait for exit completion before dialog.close(); preserve the global reduced-motion path.',
+				source: 'UI-04',
+				evidence: 'ChatAgent.svelte:173-200, 348-375',
+				effort: 'M'
+			},
+			{
+				id: 'failed-turn',
+				priority: 'P2',
+				title: 'Keep failed turns recoverable after navigation',
+				reason: 'Persist a safe failure marker or derive an orphan recovery card so Retry survives without duplicating the user message.',
+				source: 'UX-03',
+				evidence: '20260723-ui-assistant-error-375.png → dialog-open-375.png',
+				effort: 'M'
+			},
+			{
+				id: 'context-toggle',
+				priority: 'P2',
+				title: 'Make screen context reversible',
+				reason: 'Replace one-way Remove with a Use this screen toggle or a clear Remove/Restore pair.',
+				source: 'UX-05',
+				evidence: '20260723-ux-assistant-context-removed-375.png',
+				effort: 'S'
+			},
+			{
+				id: 'runtime-cap-copy',
+				priority: 'P2',
+				title: 'Show the effective configured cap',
+				reason: 'Return the resolved cap value with page/history/SSE state and interpolate it in English and Dutch.',
+				source: 'UX-07',
+				evidence: 'messages/en.json:738-739; ai/config.ts:92-118',
+				effort: 'S'
+			},
+			{
+				id: 'server-locale',
+				priority: 'P2',
+				title: 'Localize server-owned chat text',
+				reason: 'Route stream errors, tool summaries, and the captionless-photo fallback through the request locale.',
+				source: 'UX-08',
+				evidence: '+server.ts:175-178, 464-466; tool_display.ts:31-91',
+				effort: 'M'
+			},
+			{
+				id: 'touch-actions',
+				priority: 'P2',
+				title: 'Raise inline actions to the 44 px household target',
+				reason: 'Retry, Approve, Cancel, and Undo are currently 36 px high on the phone.',
+				source: 'UX-09 / UI-06',
+				evidence: '20260723-ui-assistant-confirm-375.png',
+				effort: 'XS'
+			},
+			{
+				id: 'entry-signifier',
+				priority: 'P2',
+				title: 'Distinguish contextual ask from full history',
+				reason: 'Apply the selected Assistant entry model so the bottom tab and floating launcher do not look equivalent.',
+				source: 'UX-06 / UI-07',
+				evidence: '20260723-ui-assistant-bubble-inventory-375.png',
+				effort: 'M'
+			},
+			{
+				id: 'photo-copy',
+				priority: 'P3',
+				title: 'Explain one-shot photo handling before send',
+				reason: 'Add concise copy that photos are used for this reply and are not saved.',
+				source: 'UX-10',
+				evidence: 'ChatView attachment state and API transient-image boundary',
+				effort: 'XS'
+			},
+			{
+				id: 'focus-composer',
+				priority: 'P3',
+				title: 'Restore composer focus after pointer send',
+				reason: 'Keep rapid desktop follow-up typing efficient without forcing the phone keyboard open.',
+				source: 'UX-11',
+				evidence: 'Deterministic success pass: inputFocused false',
+				effort: 'XS'
+			},
+			{
+				id: 'history-boundary',
+				priority: 'P3',
+				title: 'Make the 20-message history boundary visible',
+				reason: 'Label the transcript Recent conversation and load older turns or state the intentional window.',
+				source: 'UX-12',
+				evidence: 'recent_chat.ts:7-20',
+				effort: 'M'
+			},
+			{
+				id: 'chat-type',
+				priority: 'P3',
+				title: 'Relax chat typography',
+				reason: 'Move primary message text toward 15–16 px while keeping metadata compact.',
+				source: 'UI-08',
+				evidence: 'ChatView.svelte:232-243, 267-304',
+				effort: 'S'
+			},
+			{
+				id: 'desktop-exit',
+				priority: 'P3',
+				title: 'Tune desktop exit motion',
+				reason: 'Complete the existing polished entrance with a shorter accelerated exit.',
+				source: 'UI-09',
+				evidence: 'ChatAgent.svelte:173-200, 348-361',
+				effort: 'S'
+			}
+		];
+
+		const decisions = [
+			{
+				id: 'entry',
+				question: 'How should the two Assistant entry points differ?',
+				context: 'The bottom tab currently opens full history; the bubble opens contextual chat. Both are named Assistant.',
+				recommendation: 'split',
+				rationale: 'It preserves the useful home transcript and the low-friction contextual ask while making the distinction visible.',
+				assumptions: 'Full-page history remains valuable; contextual questions should stay available from every working screen.',
+				evidence: 'UX-06 / UI-07; bubble-inventory-375.png',
+				uncertainty: 'A later navigation redesign could make one universal Assistant surface preferable.',
+				options: [
+					{ value: 'split', label: 'Assistant history + “Ask about this screen” bubble', consequence: 'Recommended. Keeps both jobs and makes their consequences explicit.' },
+					{ value: 'universal', label: 'One universal overlay trigger', consequence: 'Simpler entry model, but removes a dedicated conversation-home destination.' },
+					{ value: 'tab-only', label: 'Bottom tab only', consequence: 'Least visual clutter, but contextual help takes more steps and loses page immediacy.' }
+				]
+			},
+			{
+				id: 'photos',
+				question: 'Should chat photos remain one-shot?',
+				context: 'The server uses photos for one turn and does not persist them, but the UI does not explain that behavior.',
+				recommendation: 'transient',
+				rationale: 'One-shot handling minimizes private household data, storage growth, backup weight, export complexity, and deletion obligations.',
+				assumptions: 'Users mainly attach photos to identify or import something, not to build a visual transcript.',
+				evidence: 'UX-10; chat API transient-image boundary',
+				uncertainty: 'If the household relies on visual meal history, persistence may have more value than the current product suggests.',
+				options: [
+					{ value: 'transient', label: 'Keep one-shot and disclose it', consequence: 'Recommended. Clear privacy rule with no new storage lifecycle.' },
+					{ value: 'persist', label: 'Persist photos in chat history', consequence: 'Richer transcript, with storage, export, backup, privacy, and deletion work.' },
+					{ value: 'receipt', label: 'Persist a text receipt only', consequence: 'Shows that a photo was used without retaining the image itself.' }
+				]
+			},
+			{
+				id: 'motion',
+				question: 'How expressive should the assistant dialog feel?',
+				context: 'Desktop has a restrained entrance. Phone entry and every exit are currently instant.',
+				recommendation: 'productive',
+				rationale: 'A short productive transition makes state change legible without adding flourish to a kitchen utility.',
+				assumptions: 'The assistant should feel responsive and calm, not celebratory; reduced motion remains authoritative.',
+				evidence: 'UI-04 / UI-09; existing 150/240 ms tokens',
+				uncertainty: 'Physical device performance could justify reducing travel distance further.',
+				options: [
+					{ value: 'productive', label: 'Short productive motion', consequence: 'Recommended. 200–240 ms entry, 120–160 ms exit, small translate/fade.' },
+					{ value: 'instant', label: 'Keep phone motion instant', consequence: 'Fastest, but continues the current discontinuity and fails the audit’s motion standard.' },
+					{ value: 'expressive', label: 'More expressive assistant motion', consequence: 'Adds personality, but risks feeling slow and competing with task feedback.' }
+				]
+			}
+		];
+
+		let state = {
+			fixes: Object.fromEntries(fixes.map((fix) => [fix.id, fix.priority !== 'P3'])),
+			fixNotes: {},
+			decisions: Object.fromEntries(decisions.map((decision) => [decision.id, decision.recommendation])),
+			decisionNotes: {}
+		};
+
+		const saveState = document.getElementById('save-state');
+		function load() {
+			try {
+				const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+				if (saved && typeof saved === 'object') state = {
+					...state,
+					...saved,
+					fixes: { ...state.fixes, ...(saved.fixes || {}) },
+					fixNotes: { ...(saved.fixNotes || {}) },
+					decisions: { ...state.decisions, ...(saved.decisions || {}) },
+					decisionNotes: { ...(saved.decisionNotes || {}) }
+				};
+			} catch {
+				saveState.textContent = 'Local saving is unavailable; choices remain usable for this session.';
+			}
+		}
+		function save() {
+			try {
+				localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+				saveState.textContent = 'Choices saved locally in this browser.';
+			} catch {
+				saveState.textContent = 'Could not save locally; choices remain usable for this session.';
+			}
+			buildPrompt();
+		}
+		function renderFix(fix) {
+			const label = document.createElement('label');
+			label.className = 'fix';
+			const input = document.createElement('input');
+			input.type = 'checkbox';
+			input.checked = Boolean(state.fixes[fix.id]);
+			input.setAttribute('aria-label', `Include ${fix.title}`);
+			input.addEventListener('change', () => {
+				state.fixes[fix.id] = input.checked;
+				save();
+			});
+			const body = document.createElement('div');
+			body.innerHTML = `
+				<h4><span class="badge ${fix.priority.toLowerCase()}">${fix.priority}</span>${fix.title}</h4>
+				<p>${fix.reason}</p>
+				<div class="meta">${fix.source} · Effort ${fix.effort} · ${fix.evidence}</div>
+			`;
+			const note = document.createElement('textarea');
+			note.className = 'note';
+			note.placeholder = 'Optional note for this exact package…';
+			note.value = state.fixNotes[fix.id] || '';
+			note.addEventListener('input', () => {
+				state.fixNotes[fix.id] = note.value;
+				save();
+			});
+			body.appendChild(note);
+			label.append(input, body);
+			return label;
+		}
+		function renderFixes() {
+			for (const priority of ['P1', 'P2', 'P3']) {
+				const target = document.getElementById(priority.toLowerCase() + '-list');
+				fixes.filter((fix) => fix.priority === priority).forEach((fix) => target.appendChild(renderFix(fix)));
+			}
+		}
+		function renderDecisions() {
+			const target = document.getElementById('decision-list');
+			decisions.forEach((decision, index) => {
+				const card = document.createElement('article');
+				card.className = 'decision';
+				card.innerHTML = `
+					<div class="number">${index + 1}</div>
+					<h3>${decision.question}</h3>
+					<p>${decision.context}</p>
+					<div class="options"></div>
+				`;
+				const options = card.querySelector('.options');
+				decision.options.forEach((option) => {
+					const label = document.createElement('label');
+					label.className = 'option';
+					const input = document.createElement('input');
+					input.type = 'radio';
+					input.name = `decision-${decision.id}`;
+					input.value = option.value;
+					input.checked = state.decisions[decision.id] === option.value;
+					input.addEventListener('change', () => {
+						state.decisions[decision.id] = option.value;
+						save();
+					});
+					const text = document.createElement('span');
+					text.innerHTML = `<strong>${option.label}${option.value === decision.recommendation ? '<span class="recommend">Recommended</span>' : ''}</strong><small>${option.consequence}</small>`;
+					label.append(input, text);
+					options.appendChild(label);
+				});
+				const note = document.createElement('textarea');
+				note.className = 'note';
+				note.placeholder = 'Your note for this decision (copied verbatim)…';
+				note.value = state.decisionNotes[decision.id] || '';
+				note.addEventListener('input', () => {
+					state.decisionNotes[decision.id] = note.value;
+					save();
+				});
+				card.appendChild(note);
+				target.appendChild(card);
+			});
+		}
+		function buildPrompt() {
+			const accepted = fixes.filter((fix) => state.fixes[fix.id]);
+			const excluded = fixes.filter((fix) => !state.fixes[fix.id]);
+			const lines = [
+				`Load ${sources[0]} and ${sources[1]}, then /run.`,
+				'',
+				'Execute the selected assistant bubble/chat UX and UI packages as one coherent reliability pass. Preserve the repository invariants, use the existing Svelte 5/daisyUI/motion system, and verify at 375, 768, 1280, and 1536 px. Use deterministic intercepted chat streams; do not incur provider spend.',
+				'',
+				'Accepted packages:'
+			];
+			accepted.forEach((fix) => {
+				lines.push(`- [${fix.priority}] ${fix.title} (${fix.source}, effort ${fix.effort}). Recommendation: ${fix.reason} Evidence: ${fix.evidence}`);
+				const note = state.fixNotes[fix.id];
+				if (note) lines.push(`  User note for ${fix.id} (verbatim): ${note}`);
+			});
+			lines.push('', 'Excluded packages:');
+			if (!excluded.length) lines.push('- None.');
+			excluded.forEach((fix) => {
+				lines.push(`- [${fix.priority}] ${fix.title} (${fix.source}).`);
+				const note = state.fixNotes[fix.id];
+				if (note) lines.push(`  User note for ${fix.id} (verbatim): ${note}`);
+			});
+			lines.push('', 'Decisions:');
+			decisions.forEach((decision) => {
+				const selected = decision.options.find((option) => option.value === state.decisions[decision.id]) || decision.options[0];
+				const recommended = decision.options.find((option) => option.value === decision.recommendation);
+				lines.push(`- Question: ${decision.question}`);
+				lines.push(`  Source context: ${decision.context}`);
+				lines.push(`  Options: ${decision.options.map((option) => `${option.label} — ${option.consequence}`).join(' / ')}`);
+				lines.push(`  Selected outcome: ${selected.label} — ${selected.consequence}`);
+				lines.push(`  Recommended outcome: ${recommended.label}. Rationale: ${decision.rationale}`);
+				lines.push(`  Assumptions: ${decision.assumptions}`);
+				lines.push(`  Evidence: ${decision.evidence}`);
+				lines.push(`  Uncertainty: ${decision.uncertainty}`);
+				const note = state.decisionNotes[decision.id];
+				if (note) lines.push(`  User note for ${decision.id} (verbatim): ${note}`);
+			});
+			lines.push(
+				'',
+				'Required verification:',
+				'- A mobile Open chip reveals its destination immediately.',
+				'- Cap state transitions true→false and false→true without a full reload, and no blocked AI trigger remains enabled.',
+				'- A failed final turn still offers Retry after route navigation and reload.',
+				'- The launcher never paints at a fallback position before settling.',
+				'- Two photo previews have independent, non-overlapping 44×44 remove controls.',
+				'- Context can be removed and restored on the same screen.',
+				'- English and Dutch contain no server-generated text from the other locale and show the actual configured cap.',
+				'- Phone open and all-viewport close motion respect reduced motion.',
+				'- Run npm run check, npm run test:unit, and npm run build after implementation.'
+			);
+			document.getElementById('prompt').value = lines.join('\n');
+		}
+
+		document.getElementById('copy').addEventListener('click', async () => {
+			const prompt = document.getElementById('prompt');
+			try {
+				await navigator.clipboard.writeText(prompt.value);
+				saveState.textContent = 'Prompt copied.';
+			} catch {
+				prompt.focus();
+				prompt.select();
+				saveState.textContent = 'Clipboard access failed. The prompt is selected; copy it manually.';
+			}
+		});
+		document.getElementById('reset').addEventListener('click', () => {
+			try { localStorage.removeItem(STORAGE_KEY); } catch {}
+			location.reload();
+		});
+
+		load();
+		renderFixes();
+		renderDecisions();
+		buildPrompt();
+	</script>
+</body>
+</html>

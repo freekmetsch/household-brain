@@ -18,9 +18,13 @@
 				content: string;
 				toolCalls: unknown;
 				createdAt: Date;
+				errorCode?: 'interrupted_turn';
 			}[];
 			expiring: ExpiringItem[];
 			capExceeded: boolean;
+			capEur: number;
+			hasOlder: boolean;
+			visibleLimit: number;
 		};
 	} = $props();
 
@@ -28,7 +32,10 @@
 	const chatAgent = useChatAgent();
 	untrack(() =>
 		chatAgent.hydrateOnce(data.messages, {
-			capExceeded: data.capExceeded
+			capExceeded: data.capExceeded,
+			capEur: data.capEur,
+			hasOlder: data.hasOlder,
+			visibleLimit: data.visibleLimit
 		})
 	);
 

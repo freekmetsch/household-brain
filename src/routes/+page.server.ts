@@ -3,7 +3,7 @@ import { and, isNull, isNotNull, lte } from 'drizzle-orm';
 import { db } from '$lib/server/db/index';
 import { inventoryItems } from '$lib/server/db/schema';
 import { checkDailyCap } from '$lib/server/ai/client';
-import { recentChatMessages } from '$lib/server/ai/recent_chat';
+import { recentChatPage } from '$lib/server/ai/recent_chat';
 import { isoDateInAppTimeZone } from '$lib/week';
 
 function plusDaysIso(days: number): string {
@@ -13,7 +13,7 @@ function plusDaysIso(days: number): string {
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const messages = recentChatMessages(db, locals.user!.id);
+	const history = recentChatPage(db, locals.user!.id);
 
 	const expiring = db
 		.select({
@@ -34,7 +34,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.limit(5)
 		.all();
 
-	const { exceeded: capExceeded } = checkDailyCap();
+	const { exceeded: capExceeded, capEur } = checkDailyCap();
 
-	return { messages, expiring, capExceeded };
+	return { ...history, expiring, capExceeded, capEur };
 };

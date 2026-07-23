@@ -27,12 +27,14 @@ import { getHouseholdPref, K_HOUSEHOLD_PROFILE } from '$lib/server/db/household_
 import type { TurnExecutionContext } from '$lib/server/ai/commit_risk';
 import { APP_TIME_ZONE } from '$lib/week';
 import { getLocale } from '$lib/paraglide/runtime';
+import { m } from '$lib/paraglide/messages';
 import type { ScreenContextV1 } from '$lib/chat/screen_context';
 import {
 	blocksDirtyRecipeWrite,
 	parseScreenContext,
 	serializeScreenContext
 } from '$lib/server/ai/screen_context';
+import { beginChatTurn } from '$lib/server/ai/chat_activity';
 import {
 	chatActionProgress,
 	formatChatActionResult,
@@ -104,12 +106,13 @@ function sseDone(): Uint8Array {
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
 	const user = locals.user;
+	const locale = getLocale() === 'nl' ? 'nl' : 'en';
 
-	const { exceeded } = checkDailyCap();
+	const { exceeded, capEur } = checkDailyCap();
 	if (exceeded) {
 		const stream = new ReadableStream({
 			start(controller) {
-				controller.enqueue(sse({ type: 'error', code: 'cap_exceeded' }));
+				controller.enqueue(sse({ type: 'error', code: 'cap_exceeded', capEur }));
 				controller.enqueue(sseDone());
 				controller.close();
 			}
@@ -211,7 +214,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 	// A photo can arrive with no caption; give the model a minimal instruction so the
 	// user turn is never empty. The same text is what we persist (images are dropped).
-	const userText = message.trim() || (hasImages ? "Here's a photo." : '');
+	const userText = message.trim() || (hasImages ? m.chat_photo_fallback_text() : '');
 	if (!userText) throw error(400, 'message required');
 
 	// Persist user message (text only — images are transient). A client Retry
@@ -256,6 +259,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	);
 
 	const systemPrompt = loadSystemPrompt(user.username);
+	const finishActiveTurn = beginChatTurn(user.id);
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -268,7 +272,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				const resultText = formatChatActionResult(
 					actionContext,
 					db,
-					getLocale() === 'nl' ? 'nl' : 'en'
+					locale
 				);
 				fullText = resultText;
 				controller.enqueue(sse({ type: 'text', text: resultText }));
@@ -309,7 +313,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			const turnCtx: TurnExecutionContext = {
 				createdThisTurn: new Set<number>(),
 				destructiveCount: 0,
-				visionTurn: hasImages
+				visionTurn: hasImages,
+				locale
 			};
 
 			try {
@@ -421,7 +426,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 								type: 'tool_start',
 								id: tool.id,
 								name: tool.name,
-								summary: describeToolStart(tool.name, tool.input)
+								summary: describeToolStart(tool.name, tool.input, locale)
 							})
 						);
 						const actionError = actionContext
@@ -435,7 +440,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 									error: 'Save or discard the open recipe draft before changing this recipe with AI.'
 								}
 								: await executeToolCall(tool.name, tool.input, db, user.id, turnCtx);
-						const display = buildToolDisplay(db, tool.name, tool.input, result);
+						const display = buildToolDisplay(db, tool.name, tool.input, result, locale);
 						allToolCalls.push({ id: tool.id, name: tool.name, input: tool.input, result, display });
 						controller.enqueue(sse({ type: 'tool', id: tool.id, name: tool.name, result, display }));
 						toolResults.push({
@@ -463,7 +468,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				if (!request.signal.aborted) {
 					console.error('[chat] stream error:', err);
 					controller.enqueue(
-						sse({ type: 'error', message: 'The AI ran into a problem mid-reply.' })
+						sse({ type: 'error', message: m.chat_error_mid_reply() })
 					);
 				}
 			}
@@ -484,6 +489,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					.run();
 			}
 
+			finishActiveTurn();
 			controller.enqueue(sseDone());
 			controller.close();
 		}

@@ -9,6 +9,7 @@
 	import { m } from '$lib/paraglide/messages';
 	import type { ChatAgentController } from '$lib/stores/chat-agent.svelte';
 	import { COOK_TIMER_LAYOUT_EVENT } from '$lib/timer/layout';
+	import { MOTION_MICRO_MS } from '$lib/motion';
 
 	let { controller }: { controller: ChatAgentController } = $props();
 	let dialog = $state<HTMLDialogElement>();
@@ -21,6 +22,11 @@
 	let returnFocusToBubble = false;
 	let settlingBubble = false;
 	let settleAgain = false;
+	let bubbleReady = $state(false);
+	let positionPreferenceLoaded = false;
+	let bubbleInitId = 0;
+	let dialogClosing = $state(false);
+	let dialogClosePromise: Promise<void> | null = null;
 	const STORAGE_KEY = 'kitchenbrain-agent-position-v1';
 
 	function persistPosition(rect: DOMRect) {
@@ -45,7 +51,7 @@
 		return Math.max(12, obstructionTop - height - 12);
 	}
 
-	function placeAtSavedPosition() {
+	async function placeAtSavedPosition() {
 		if (!bubble) return;
 		const rect = bubble.getBoundingClientRect();
 		const margin = 12;
@@ -58,7 +64,28 @@
 			x: position.x + targetLeft - rect.left,
 			y: position.y + targetTop - rect.top
 		};
-		void settleBubble();
+		await settleBubble();
+	}
+
+	async function initializeBubble(node: HTMLButtonElement) {
+		const initId = ++bubbleInitId;
+		bubbleReady = false;
+		await tick();
+		if (bubble !== node || initId !== bubbleInitId) return;
+		await placeAtSavedPosition();
+		if (bubble === node && initId === bubbleInitId) bubbleReady = true;
+	}
+
+	function prepareBubble(node: HTMLButtonElement) {
+		bubble = node;
+		if (positionPreferenceLoaded) void initializeBubble(node);
+		return {
+			destroy() {
+				if (bubble === node) bubble = undefined;
+				bubbleReady = false;
+				bubbleInitId += 1;
+			}
+		};
 	}
 
 	function resolveTimerCollision() {
@@ -160,10 +187,29 @@
 		}
 	}
 
+	function closeDialogAfterMotion(): Promise<void> {
+		if (!dialog?.open) return Promise.resolve();
+		if (dialogClosePromise) return dialogClosePromise;
+		dialogClosing = true;
+		dialogClosePromise = (async () => {
+			await tick();
+			const reducedMotion =
+				window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+			if (!reducedMotion) {
+				await new Promise((resolve) => setTimeout(resolve, MOTION_MICRO_MS));
+			}
+			if (!controller.opened && dialog?.open) dialog.close();
+			dialogClosing = false;
+			dialogClosePromise = null;
+		})();
+		return dialogClosePromise;
+	}
+
 	async function closeAgent() {
 		const focusBubble = returnFocusToBubble;
 		returnFocusToBubble = false;
-		if (controller.opened) controller.close();
+		if (controller.opened) controller.close({ restoreFocus: false });
+		await closeDialogAfterMotion();
 		if (focusBubble) {
 			await tick();
 			bubble?.focus();
@@ -191,10 +237,13 @@
 
 	function syncDialog() {
 		if (!dialog) return;
-		if (controller.opened && !dialog.open) {
-			if (mobile) dialog.showModal();
-			else dialog.show();
-		} else if (!controller.opened && dialog.open) dialog.close();
+		if (controller.opened) {
+			dialogClosing = false;
+			if (!dialog.open) {
+				if (mobile) dialog.showModal();
+				else dialog.show();
+			}
+		} else if (dialog.open) void closeDialogAfterMotion();
 	}
 
 	$effect(syncDialog);
@@ -225,12 +274,14 @@
 		} catch {
 			// Ignore a malformed local-only preference.
 		}
-		void tick().then(placeAtSavedPosition);
-		window.addEventListener('resize', placeAtSavedPosition);
+		positionPreferenceLoaded = true;
+		if (bubble) void initializeBubble(bubble);
+		const handleResize = () => void placeAtSavedPosition();
+		window.addEventListener('resize', handleResize);
 		window.addEventListener(COOK_TIMER_LAYOUT_EVENT, settleBubble);
 		return () => {
 			query.removeEventListener('change', updateMode);
-			window.removeEventListener('resize', placeAtSavedPosition);
+			window.removeEventListener('resize', handleResize);
 			window.removeEventListener(COOK_TIMER_LAYOUT_EVENT, settleBubble);
 		};
 	});
@@ -240,10 +291,10 @@
      Send button on phones and offered no additional action there. -->
 {#if !controller.opened && $page.url.pathname !== `${base}/`}
 	<button
-		bind:this={bubble}
+		use:prepareBubble
 		use:draggable={dragOptions}
 		type="button"
-		class="ui-z-agent fixed right-3 flex h-12 w-12 touch-none select-none items-center justify-center rounded-full bg-primary/95 text-primary-content shadow-lg transition-[box-shadow,opacity] hover:bg-primary hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary {dragging ? 'ring-4 ring-primary/25' : ''}"
+		class="ui-z-agent fixed right-3 flex h-12 min-w-12 touch-none select-none items-center justify-center gap-2 rounded-full bg-primary/95 px-3 text-primary-content shadow-lg transition-[box-shadow,opacity] duration-[var(--motion-micro)] hover:bg-primary hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary {bubbleReady ? 'opacity-100' : 'pointer-events-none opacity-0'} {dragging ? 'ring-4 ring-primary/25' : ''}"
 		style="bottom: var(--ui-overlay-bottom)"
 		aria-label={m.agent_open_aria()}
 		aria-keyshortcuts="ArrowUp ArrowDown"
@@ -251,6 +302,7 @@
 		onclick={openAgent}
 	>
 		<Icon name="pot" class="h-6 w-6" />
+		<span class="max-w-36 text-left text-xs font-semibold leading-tight">{m.agent_contextual_open_label()}</span>
 		{#if controller.unread > 0}
 			<span class="absolute -right-0.5 -top-0.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-error px-1 text-[10px] font-bold text-error-content"
 				>{controller.unread}</span
@@ -261,7 +313,7 @@
 
 <dialog
 	bind:this={dialog}
-	class="agent-dialog ui-z-agent fixed m-0 max-h-none max-w-none overflow-hidden border border-base-300 bg-base-100 p-0 shadow-2xl"
+	class="agent-dialog ui-z-agent fixed m-0 max-h-none max-w-none overflow-hidden border border-base-300 bg-base-100 p-0 shadow-2xl {dialogClosing ? 'is-closing' : ''}"
 	aria-labelledby="agent-title"
 	oncancel={(event) => {
 		event.preventDefault();
@@ -292,15 +344,21 @@
 			>
 		</header>
 
-		{#if controller.screenContext && controller.contextEnabled}
-			<div class="flex items-center gap-2 border-b border-base-200 bg-base-200/50 px-3 py-2 text-xs">
+		{#if controller.screenContext}
+			<div class="flex items-center gap-2 border-b border-base-200 bg-base-200/50 px-3 py-2 text-xs {controller.contextEnabled ? '' : 'text-base-content/60'}">
 				<span class="min-w-0 flex-1 truncate"
-					>{m.agent_using_context({ label: controller.screenContext.label })}</span
+					>{controller.contextEnabled
+						? m.agent_using_context({ label: controller.screenContext.label })
+						: m.agent_context_disabled({ label: controller.screenContext.label })}</span
 				>
 				<button
 					type="button"
 					class="btn btn-ghost btn-xs h-11 min-h-0"
-					onclick={() => controller.removeContext()}>{m.agent_remove_context()}</button
+					aria-pressed={controller.contextEnabled}
+					onclick={() => controller.setContextEnabled(!controller.contextEnabled)}
+					>{controller.contextEnabled
+						? m.agent_disable_context()
+						: m.agent_enable_context()}</button
 				>
 			</div>
 		{/if}
@@ -345,10 +403,12 @@
 		border-radius: var(--radius-box);
 		transform-origin: bottom right;
 	}
-	@media (min-width: 52rem) {
-		.agent-dialog[open] {
-			animation: agent-dialog-enter var(--motion-content) var(--ease-emphasized);
-		}
+	.agent-dialog[open]:not(.is-closing) {
+		animation: agent-dialog-enter var(--motion-content) var(--ease-emphasized);
+	}
+	.agent-dialog.is-closing {
+		pointer-events: none;
+		animation: agent-dialog-exit var(--motion-micro) var(--ease-standard) forwards;
 	}
 	@keyframes agent-dialog-enter {
 		from {
@@ -358,6 +418,16 @@
 		to {
 			opacity: 1;
 			transform: translateY(0) scale(1);
+		}
+	}
+	@keyframes agent-dialog-exit {
+		from {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+		to {
+			opacity: 0;
+			transform: translateY(0.35rem) scale(0.99);
 		}
 	}
 	@media (max-width: 51.999rem) {

@@ -2,6 +2,8 @@
 
 _Status: In flight — selected assistant packages shipped; physical timer-device gate remains (2026-07-23)_
 
+> The assistant-only post-ship findings shipped and are archived in `archive/FEATURE_LIST_UX_ASSISTANT_CHAT.md`. This document remains active only for assistant/timer coexistence and the physical locked-screen timer gate.
+
 ## Goal and boundary
 
 The assistant should feel available without competing with cooking. The timer must remain glanceable, dismissible, and capable of reaching an audible alarm while the screen is locked. This workup covers the experience around chat, not the content of assistant replies.

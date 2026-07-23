@@ -1,6 +1,7 @@
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from '$lib/server/db/schema';
+import { isChatTurnActive } from '$lib/server/ai/chat_activity';
 
 type DB = BetterSQLite3Database<typeof schema>;
 
@@ -19,4 +20,33 @@ export function recentChatMessages(db: DB, userId: number, limit = 20) {
 		.limit(limit)
 		.all()
 		.reverse();
+}
+
+export function recentChatPage(db: DB, userId: number, limit = 20) {
+	const messages = recentChatMessages(db, userId, limit);
+	const total =
+		db
+			.select({ value: count() })
+			.from(schema.chatMessages)
+			.where(eq(schema.chatMessages.userId, userId))
+			.get()?.value ?? 0;
+	const newest = messages.at(-1);
+
+	return {
+		messages:
+			newest?.role === 'user' && !isChatTurnActive(userId)
+				? [
+						...messages,
+						{
+							role: 'assistant' as const,
+							content: '',
+							toolCalls: null,
+							createdAt: newest.createdAt,
+							errorCode: 'interrupted_turn' as const
+						}
+					]
+				: messages,
+		hasOlder: total > messages.length,
+		visibleLimit: limit
+	};
 }

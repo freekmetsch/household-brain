@@ -3,6 +3,7 @@
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { fly } from 'svelte/transition';
 	import { base } from '$app/paths';
+	import { goto } from '$app/navigation';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
@@ -176,15 +177,18 @@
 		controller.cancelConfirm(tool);
 	}
 
-	async function send(text: string, isRetry = false) {
+	async function send(text: string, isRetry = false, restoreComposer = false) {
+		const hadComposerFocus = document.activeElement === textareaEl;
 		const request = controller.send(text, isRetry);
 		await tick();
-		if (textareaEl) {
-			textareaEl.style.height = 'auto';
-			textareaEl.focus();
-		}
+		if (textareaEl) textareaEl.style.height = 'auto';
 		await scrollToBottom(true);
 		await request;
+		const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+		if (restoreComposer && (hadComposerFocus || !coarsePointer)) {
+			await tick();
+			textareaEl?.focus();
+		}
 	}
 
 	function abort() {
@@ -207,8 +211,26 @@
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
-			void send(controller.input);
+			void send(controller.input, false, true);
 		}
+	}
+
+	async function openScreen(event: MouseEvent, href: string) {
+		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+		event.preventDefault();
+		if (controller.opened) {
+			controller.close({ restoreFocus: false });
+			const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+			if (!reducedMotion) {
+				await new Promise((resolve) => setTimeout(resolve, MOTION_MICRO_MS));
+			}
+		}
+		await goto(href);
+		await tick();
+		const heading = document.querySelector<HTMLElement>('main h1, main [data-page-heading], main h2');
+		if (!heading) return;
+		if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+		heading.focus({ preventScroll: true });
 	}
 </script>
 
@@ -220,6 +242,11 @@
 			onscroll={onListScroll}
 			class="h-full min-w-0 overflow-x-hidden overflow-y-auto px-3 py-4 space-y-1"
 		>
+		{#if controller.historyHasOlder}
+			<p class="pb-2 text-center text-xs font-medium text-base-content/60">
+				{m.chat_recent_history({ count: controller.historyVisibleLimit })}
+			</p>
+		{/if}
 		{#if messages.length === 0}
 			<div class="flex flex-col items-center justify-center h-full text-center pt-16 pb-8 gap-1.5">
 				<p class="text-lg font-medium text-base-content/80">{greeting()}</p>
@@ -240,7 +267,7 @@
 				<div
 					class="chat-bubble {msg.role === 'user'
 						? 'chat-bubble-primary'
-						: 'bg-base-200 text-base-content'} min-w-0 max-w-[85%] whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]"
+						: 'bg-base-200 text-base-content'} min-w-0 max-w-[85%] whitespace-pre-wrap break-words text-base leading-relaxed [overflow-wrap:anywhere]"
 				>
 					{#if msg.images && msg.images.length > 0}
 						<div class="mb-2 flex flex-wrap gap-1.5">
@@ -314,7 +341,7 @@
 										{#if opId !== null}
 											<div class="pl-5">
 												{#if !tool.undo}
-											<button class="btn btn-ghost btn-xs min-h-9 px-2 text-xs opacity-70 hover:opacity-100" onclick={() => undo(tool, opId)}>
+											<button class="btn btn-ghost btn-xs ui-chat-action px-2 text-xs opacity-70 hover:opacity-100" onclick={() => undo(tool, opId)}>
 														<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 015 5v1M3 10l4-4M3 10l4 4" /></svg>
 														{m.chat_tool_undo_button()}
 													</button>
@@ -345,11 +372,11 @@
 												{:else}
 													<div class="flex gap-1.5">
 														<button
-															class="btn btn-primary btn-xs min-h-9"
+															class="btn btn-primary btn-xs ui-chat-action"
 															disabled={!d.confirmationId}
 															onclick={() => d.confirmationId && approveConfirm(tool, d.confirmationId)}
 														>{m.chat_confirm_approve_button()}</button>
-														<button class="btn btn-ghost btn-xs min-h-9 opacity-70" onclick={() => cancelConfirm(tool)}>{m.chat_confirm_cancel_button()}</button>
+														<button class="btn btn-ghost btn-xs ui-chat-action opacity-70" onclick={() => cancelConfirm(tool)}>{m.chat_confirm_cancel_button()}</button>
 													</div>
 												{/if}
 											</div>
@@ -375,7 +402,7 @@
 							<span>{msg.error}</span>
 						</div>
 						{#if canRetry(msg, mi)}
-							<button class="btn btn-xs btn-outline btn-warning mt-2 min-h-9 gap-1" onclick={retry}>
+							<button class="btn btn-xs btn-outline btn-warning ui-chat-action mt-2 gap-1" onclick={retry}>
 								<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
 								{m.mealplan_retry_button()}
 							</button>
@@ -407,7 +434,7 @@
 			aria-live="polite"
 			aria-atomic="true"
 		>
-			<span>{m.chat_cap_banner()}</span>
+			<span>{m.chat_cap_banner({ amount: controller.formatCap() })}</span>
 		</div>
 	{/if}
 
@@ -426,6 +453,7 @@
 					{#each QUICK_CHIPS.filter((chip) => chip.kind === 'nav') as chip}
 						<a
 							href={chip.href}
+							onclick={(event) => void openScreen(event, chip.href)}
 							class="btn btn-sm h-11 min-h-0 gap-1.5 border-base-300 bg-base-200/60 px-3 text-xs hover:bg-base-200"
 						>
 						<Icon name={chip.icon} class="h-3.5 w-3.5" />
@@ -442,6 +470,7 @@
 					{#each QUICK_CHIPS.filter((chip) => chip.kind === 'ai') as chip}
 						<button
 							class="btn btn-sm btn-outline btn-primary h-11 min-h-0 gap-1.5 px-3 text-xs"
+							disabled={capExceeded}
 							onclick={() => send(chip.prompt)}
 						>
 							<Icon name="pot" class="h-3.5 w-3.5" />
@@ -460,12 +489,12 @@
 	>
 		<!-- Attached photo previews -->
 		{#if attachments.length > 0}
-			<div class="mb-2 flex flex-wrap gap-2">
+			<div class="mb-1.5 flex flex-wrap gap-2">
 				{#each attachments as att (att.id)}
-					<div class="relative">
+					<div class="flex items-center gap-1 rounded-lg border border-base-300 bg-base-200/40 p-1">
 						<img src={att.url} alt={att.name} class="h-16 w-16 rounded-md border border-base-300 object-cover" />
 						<button
-							class="btn btn-circle btn-xs btn-neutral absolute -right-4 -top-4 h-11 min-h-0 w-11 shadow"
+							class="btn btn-circle btn-neutral chat-attachment-remove shrink-0 p-0 shadow"
 							onclick={() => removeAttachment(att.id)}
 							title={m.recipes_header_remove_photo()}
 							aria-label={m.recipes_header_remove_photo()}
@@ -475,6 +504,7 @@
 					</div>
 				{/each}
 			</div>
+			<p class="mb-2 text-xs text-base-content/60">{m.chat_photo_privacy_note()}</p>
 		{/if}
 		{#if attachError}
 			<div class="mb-1.5 text-xs text-warning" role="alert" aria-atomic="true">{attachError}</div>
@@ -508,7 +538,7 @@
 				</span>
 				<textarea
 					bind:this={textareaEl}
-					class="textarea textarea-bordered max-h-32 min-h-11 w-full min-w-0 resize-none text-sm leading-snug"
+					class="textarea textarea-bordered max-h-32 min-h-11 w-full min-w-0 resize-none text-base leading-snug"
 					placeholder={m.chat_composer_placeholder()}
 					rows="1"
 					disabled={isStreaming || capExceeded}
@@ -537,7 +567,7 @@
 				<button
 					class="btn btn-square btn-primary btn-sm h-11 min-h-0 w-11"
 					disabled={(!input.trim() && attachments.length === 0) || capExceeded}
-					onclick={() => send(input)}
+					onclick={() => send(input, false, true)}
 					title={m.chat_send_button_title()}
 					aria-label={m.chat_send_button_title()}
 				>

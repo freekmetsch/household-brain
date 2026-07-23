@@ -194,6 +194,15 @@
 	width: 2.25rem;
 	min-width: 2.25rem;
 }
+.btn.btn-xs.ui-chat-action {
+	min-height: 2.75rem;
+}
+.btn.btn-circle.chat-attachment-remove {
+	width: 2.75rem;
+	min-width: 2.75rem;
+	height: 2.75rem;
+	min-height: 2.75rem;
+}
 
 /* Horizontal filter rails: edge fades signal continuation, while scroll
    padding keeps keyboard-focused chips clear of the fade. */
