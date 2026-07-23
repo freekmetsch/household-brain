@@ -56,11 +56,21 @@
 	--ui-overlay-bottom: calc(
 		var(--ui-nav-offset) + var(--ui-fixed-bar-height) + var(--ui-overlay-gap)
 	);
+	--ui-timer-right: 0.75rem;
 	--motion-micro: 150ms;
 	--motion-content: 240ms;
 	--motion-large: 380ms;
 	--ease-standard: cubic-bezier(0.2, 0, 0, 1);
 	--ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* A desktop assistant panel and the cooking timer share the bottom-right
+   overlay lane. Keep the timer visible beside the panel; narrower tablets use
+   the assistant's full-screen mode instead. */
+@media (min-width: 52rem) {
+	:root[data-chat-agent-open='true'] {
+		--ui-timer-right: calc(min(30rem, calc(100vw - 2rem)) + 2rem);
+	}
 }
 
 .app-shell {

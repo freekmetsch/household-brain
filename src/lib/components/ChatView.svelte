@@ -388,7 +388,7 @@
 
 		{#if !atBottom}
 			<button
-				class="btn btn-circle btn-sm absolute bottom-3 left-1/2 -translate-x-1/2 border border-base-300 bg-base-100 text-base-content/70 shadow-md hover:bg-base-200"
+				class="btn btn-circle btn-sm absolute bottom-3 left-1/2 h-11 min-h-0 w-11 -translate-x-1/2 border border-base-300 bg-base-100 text-base-content/70 shadow-md hover:bg-base-200"
 				onclick={jumpToBottom}
 				title={m.chat_jump_to_latest_aria()}
 				aria-label={m.chat_jump_to_latest_aria()}
@@ -401,29 +401,55 @@
 
 	<!-- Daily cap banner -->
 	{#if capExceeded}
-		<div class="mx-3 mb-2 alert alert-warning text-sm py-2">
+		<div
+			class="mx-3 mb-2 alert alert-warning py-2 text-sm"
+			role="status"
+			aria-live="polite"
+			aria-atomic="true"
+		>
 			<span>{m.chat_cap_banner()}</span>
 		</div>
 	{/if}
 
 	<!-- Quick chips — only when no messages -->
 	{#if messages.length === 0 && !isStreaming}
-		<div class="px-3 pb-2 flex flex-wrap gap-2">
-			{#each QUICK_CHIPS as chip}
-				{#if chip.kind === 'nav'}
-					<a href={chip.href} class="btn btn-sm btn-outline btn-neutral text-xs gap-1.5">
+		<div
+			class="flex flex-col gap-2 px-3 pb-2"
+			role="group"
+			aria-label={m.chat_quick_actions_label()}
+		>
+			<div class="flex items-start gap-2" role="group" aria-label={m.chat_quick_open_group()}>
+				<span class="w-10 shrink-0 pt-3 text-[10px] font-bold uppercase tracking-wide text-base-content/45">
+					{m.chat_quick_open_label()}
+				</span>
+				<div class="flex min-w-0 flex-1 flex-wrap gap-2">
+					{#each QUICK_CHIPS.filter((chip) => chip.kind === 'nav') as chip}
+						<a
+							href={chip.href}
+							class="btn btn-sm h-11 min-h-0 gap-1.5 border-base-300 bg-base-200/60 px-3 text-xs hover:bg-base-200"
+						>
 						<Icon name={chip.icon} class="h-3.5 w-3.5" />
 						{chip.label}
-					</a>
-				{:else}
-					<button
-						class="btn btn-sm btn-outline btn-neutral text-xs"
-						onclick={() => send(chip.prompt)}
-					>
-						{chip.label}
-					</button>
-				{/if}
-			{/each}
+						</a>
+					{/each}
+				</div>
+			</div>
+			<div class="flex items-start gap-2" role="group" aria-label={m.chat_quick_ask_group()}>
+				<span class="w-10 shrink-0 pt-3 text-[10px] font-bold uppercase tracking-wide text-primary/70">
+					{m.chat_quick_ask_label()}
+				</span>
+				<div class="flex min-w-0 flex-1 flex-wrap gap-2">
+					{#each QUICK_CHIPS.filter((chip) => chip.kind === 'ai') as chip}
+						<button
+							class="btn btn-sm btn-outline btn-primary h-11 min-h-0 gap-1.5 px-3 text-xs"
+							onclick={() => send(chip.prompt)}
+						>
+							<Icon name="pot" class="h-3.5 w-3.5" />
+							{chip.label}
+						</button>
+					{/each}
+				</div>
+			</div>
 		</div>
 	{/if}
 
@@ -439,7 +465,7 @@
 					<div class="relative">
 						<img src={att.url} alt={att.name} class="h-16 w-16 rounded-md border border-base-300 object-cover" />
 						<button
-							class="btn btn-circle btn-xs btn-neutral absolute -right-3 -top-3 h-9 min-h-9 w-9 shadow"
+							class="btn btn-circle btn-xs btn-neutral absolute -right-4 -top-4 h-11 min-h-0 w-11 shadow"
 							onclick={() => removeAttachment(att.id)}
 							title={m.recipes_header_remove_photo()}
 							aria-label={m.recipes_header_remove_photo()}
@@ -451,7 +477,7 @@
 			</div>
 		{/if}
 		{#if attachError}
-			<div class="mb-1.5 text-xs text-warning">{attachError}</div>
+			<div class="mb-1.5 text-xs text-warning" role="alert" aria-atomic="true">{attachError}</div>
 		{/if}
 
 		<input
@@ -465,7 +491,7 @@
 
 		<div class="flex min-w-0 items-end gap-2">
 			<button
-				class="btn btn-square btn-ghost btn-sm h-10 min-h-0 w-10"
+				class="btn btn-square btn-ghost btn-sm h-11 min-h-0 w-11"
 				disabled={isStreaming || capExceeded || attachments.length >= MAX_IMAGES}
 				onclick={() => fileInput?.click()}
 				title={m.chat_attach_photo_aria()}
@@ -476,33 +502,44 @@
 				</svg>
 			</button>
 
-			<textarea
-				bind:this={textareaEl}
-				class="textarea textarea-bordered min-h-[2.5rem] min-w-0 flex-1 resize-none text-sm leading-snug max-h-32"
-				placeholder={m.chat_composer_placeholder()}
-				rows="1"
-				disabled={isStreaming || capExceeded}
-				bind:value={controller.input}
-				onkeydown={handleKeydown}
-				oninput={(e) => {
-					const el = e.currentTarget as HTMLTextAreaElement;
-					el.style.height = 'auto';
-					el.style.height = Math.min(el.scrollHeight, 128) + 'px';
-				}}
-			></textarea>
+			<label class="min-w-0 flex-1">
+				<span class="mb-1 block text-[11px] font-medium leading-none text-base-content/55">
+					{m.chat_composer_label()}
+				</span>
+				<textarea
+					bind:this={textareaEl}
+					class="textarea textarea-bordered max-h-32 min-h-11 w-full min-w-0 resize-none text-sm leading-snug"
+					placeholder={m.chat_composer_placeholder()}
+					rows="1"
+					disabled={isStreaming || capExceeded}
+					bind:value={controller.input}
+					onkeydown={handleKeydown}
+					oninput={(e) => {
+						const el = e.currentTarget as HTMLTextAreaElement;
+						el.style.height = 'auto';
+						el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+					}}
+				></textarea>
+			</label>
 
 			{#if isStreaming}
-				<button class="btn btn-square btn-error btn-sm h-10 min-h-0 w-10" onclick={abort} title={m.chat_stop_button_title()}>
+				<button
+					class="btn btn-square btn-error btn-sm h-11 min-h-0 w-11"
+					onclick={abort}
+					title={m.chat_stop_button_title()}
+					aria-label={m.chat_stop_button_title()}
+				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
 						<rect x="6" y="6" width="12" height="12" rx="1" />
 					</svg>
 				</button>
 			{:else}
 				<button
-					class="btn btn-square btn-primary btn-sm h-10 min-h-0 w-10"
+					class="btn btn-square btn-primary btn-sm h-11 min-h-0 w-11"
 					disabled={(!input.trim() && attachments.length === 0) || capExceeded}
 					onclick={() => send(input)}
 					title={m.chat_send_button_title()}
+					aria-label={m.chat_send_button_title()}
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m-7 7l7-7 7 7" />

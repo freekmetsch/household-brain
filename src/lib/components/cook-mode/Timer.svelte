@@ -25,8 +25,10 @@
 	translate transition. Vertical position persists where the user dropped it.
 -->
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { draggable, type DragEventData, type DragOptions } from '@neodrag/svelte';
 	import { m } from '$lib/paraglide/messages';
+	import { COOK_TIMER_LAYOUT_EVENT } from '$lib/timer/layout';
 	import { fmtClock } from './palette';
 
 	type Props = {
@@ -93,6 +95,7 @@
 		const targetLeft = centerX < vw / 2 ? margin : vw - rect.width - margin;
 		const dx = targetLeft - rect.left;
 		pos = { x: data.offsetX + dx, y: data.offsetY };
+		void tick().then(() => window.dispatchEvent(new Event(COOK_TIMER_LAYOUT_EVENT)));
 	}
 
 	let dragOpts = $derived<DragOptions>({
@@ -129,7 +132,7 @@
 			? 'ring-4 ring-white/40'
 			: ''} {done ? 'animate-pulse ring-4 ring-white/60' : ''}"
 		style:bottom={bottomCss}
-		style:right="0.75rem"
+		style:right="var(--ui-timer-right)"
 		style:transition={dragging ? 'none' : 'translate var(--motion-content) var(--ease-emphasized)'}
 	>
 		<!-- Grip glyph — visual draggability affordance only; the whole pill drags. -->

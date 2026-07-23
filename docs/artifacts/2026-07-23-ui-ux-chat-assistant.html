@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Chat Assistant + Timer Review</title>
+	<style>
+		:root { color-scheme: light; --ink:#18231d; --muted:#647169; --paper:#f3f1e9; --card:#fffdf8; --line:#d9d9cf; --green:#246148; --soft:#e4efe8; --amber:#8a5b06; --red:#a63d2b; }
+		* { box-sizing:border-box } html { scroll-behavior:smooth } body { margin:0; font:15px/1.55 Inter,system-ui,sans-serif; color:var(--ink); background:var(--paper) }
+		button,input { font:inherit } button { min-height:44px } .shell { width:min(1120px,calc(100% - 28px)); margin:auto; padding:28px 0 80px }
+		header,.card { background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:0 14px 42px #263c3012 }
+		header { padding:clamp(24px,5vw,48px); background:linear-gradient(135deg,#fffdf8 65%,#e7f0ea) }
+		.kicker { color:var(--green); font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase }
+		h1 { margin:12px 0; max-width:760px; font:700 clamp(38px,7vw,70px)/.98 Georgia,serif; letter-spacing:-.035em }
+		h2 { margin:0 0 16px; font-size:23px } h3 { margin:0; font-size:16px } p { margin:8px 0 } .muted { color:var(--muted) }
+		.summary { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:24px } .metric { padding:14px; border-radius:15px; background:#ffffffa8; border:1px solid var(--line) } .metric strong { display:block; font-size:24px }
+		main { display:grid; gap:20px; margin-top:20px } .card { padding:22px } .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px }
+		.fix { border-left:4px solid var(--green) } .pending { border-left:4px solid var(--amber) } .badge { display:inline-flex; align-items:center; min-height:26px; padding:0 9px; border-radius:999px; background:var(--soft); color:var(--green); font-size:12px; font-weight:800 }
+		.shots { display:grid; grid-template-columns:repeat(3,1fr); gap:12px } figure { margin:0 } img { display:block; width:100%; border:1px solid var(--line); border-radius:14px; background:white } figcaption { padding:7px 2px; color:var(--muted); font-size:12px }
+		.option { display:grid; grid-template-columns:auto 1fr; gap:12px; padding:14px 0; border-top:1px solid var(--line) } .option:first-of-type { border-top:0 } input { width:20px; height:20px; accent-color:var(--green) }
+		.actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px } button { cursor:pointer; padding:0 16px; border:1px solid var(--line); border-radius:12px; background:white; color:var(--ink); font-weight:700 } button.primary { border-color:var(--green); background:var(--green); color:white } button:hover { transform:translateY(-1px) }
+		.prompt { white-space:pre-wrap; padding:16px; border-radius:14px; background:#16231c; color:#edf7f0; font:13px/1.55 ui-monospace,Consolas,monospace }
+		.notice { min-height:24px; color:var(--green); font-weight:700 } details { border-top:1px solid var(--line); padding:12px 0 } summary { cursor:pointer; font-weight:700 }
+		@media(max-width:760px){.summary,.grid,.shots{grid-template-columns:1fr}.shell{width:min(100% - 18px,1120px)}.card{padding:18px}}
+		@media(prefers-reduced-motion:no-preference){button{transition:transform .15s ease}}
+	</style>
+</head>
+<body>
+<div class="shell">
+	<header>
+		<div class="kicker">UI + UX decision brief · 23 July 2026</div>
+		<h1>Chat can stay close without sitting on dinner.</h1>
+		<p class="muted">The assistant shell now keeps cooking controls clear, distinguishes navigation from AI actions, uses kitchen-sized targets, and communicates status consistently. Actual chat-message content remains outside this review.</p>
+		<div class="summary">
+			<div class="metric"><strong>4</strong><span>collision and timer repairs</span></div>
+			<div class="metric"><strong>4</strong><span>selected polish packages complete</span></div>
+			<div class="metric"><strong>1</strong><span>physical-device gate remains</span></div>
+		</div>
+	</header>
+
+	<main>
+		<section class="card">
+			<h2>What changed now</h2>
+			<div class="grid">
+				<div class="card fix"><span class="badge">Resolved · P1</span><h3>Separate desktop lanes</h3><p>The active timer moves left of the assistant panel instead of disappearing behind it.</p></div>
+				<div class="card fix"><span class="badge">Resolved · P1</span><h3>Tablet goes full screen</h3><p>At 768 px the assistant uses the whole screen because a panel and timer cannot both remain useful.</p></div>
+				<div class="card fix"><span class="badge">Resolved · P2</span><h3>Floating controls negotiate</h3><p>The launcher now avoids timer pills and bottom navigation, including after drag or timer-stack changes.</p></div>
+				<div class="card fix"><span class="badge">Resolved · P1</span><h3>Alarm lives in media</h3><p>The timer tap starts a media timeline with the alarm encoded at its deadline, so normal backgrounding does not depend on a throttled JavaScript callback.</p></div>
+			</div>
+		</section>
+
+		<section class="card">
+			<h2>Browser evidence</h2>
+			<div class="shots">
+				<figure><img src="../../output/playwright/20260723-ui-chat-timer-dialog-clash-1280.png" alt="Desktop assistant panel covering most of the cooking timer"><figcaption>Before: the panel covers the timer.</figcaption></figure>
+				<figure><img src="../../output/playwright/20260723-ui-chat-timer-dialog-fixed-1280.png" alt="Desktop assistant panel with timer visible beside it"><figcaption>After: a 16 px gap keeps both controls operable.</figcaption></figure>
+				<figure><img src="../../output/playwright/20260723-ui-chat-timer-agent-fullscreen-768.png" alt="Full-screen assistant at tablet width"><figcaption>768 px: full-screen assistant instead of a squeezed split.</figcaption></figure>
+			</div>
+		</section>
+
+		<section class="card">
+			<h2>Selected polish completed</h2>
+			<p class="muted">The four selected packages shipped. The disabled checks are the audit trail; optional exit motion remains available as a future package.</p>
+			<label class="option"><input type="checkbox" data-id="action-kinds" checked disabled><span><strong>Clarify quick-action consequences · Complete</strong><br><span class="muted">“Open” navigation and “Ask” AI actions now use distinct labels, grouping, and treatments.</span></span></label>
+			<label class="option"><input type="checkbox" data-id="touch-targets" checked disabled><span><strong>Raise kitchen touch targets · Complete</strong><br><span class="muted">Launcher, close, attach, send, stop, chips, and context actions now provide 44 px targets.</span></span></label>
+			<label class="option"><input type="checkbox" data-id="labels-status" checked disabled><span><strong>Keep labels and status visible · Complete</strong><br><span class="muted">The composer keeps a visible label; loading and failure changes expose status or alert semantics.</span></span></label>
+			<label class="option"><input type="checkbox" data-id="naming" checked disabled><span><strong>Use one assistant name · Complete</strong><br><span class="muted">English uses “Assistant” and Dutch uses “Assistent” across the surrounding screen.</span></span></label>
+			<details><summary>Optional P3 motion polish</summary><label class="option"><input type="checkbox" data-id="exit-motion"><span><strong>Add a short exit transition</strong><br><span class="muted">Give close the same continuity as open while preserving reduced-motion behavior.</span></span></label></details>
+			<div class="actions"><button class="primary" id="copy">Copy /run prompt</button><button id="reset">Reset selections</button></div>
+			<p id="notice" class="notice" role="status"></p>
+		</section>
+
+		<section class="card">
+			<h2>Generated continuation prompt</h2>
+			<div id="prompt" class="prompt"></div>
+		</section>
+
+		<section class="card">
+			<h2>Platform boundary</h2>
+			<p>The media path was verified while another browser tab was active. A web app still cannot promise an alarm after reload, force-close, OS eviction, or a user-paused media session. The release gate is a two-minute locked-screen test on the household's real iPhone and Android device, including silent mode and media volume.</p>
+		<p><a href="../feature-lists/FEATURE_LIST_UI_CHAT_ASSISTANT.md">Open the UI workup</a> · <a href="../feature-lists/FEATURE_LIST_UX_CHAT_ASSISTANT_AND_TIMER.md">Open the UX workup</a></p>
+		</section>
+	</main>
+</div>
+<script>
+	const KEY='keukenbrein-chat-ui-ux-review-v1';
+	const boxes=[...document.querySelectorAll('input[data-id]')];
+	const defaults={ 'exit-motion':false };
+	function selected(){return boxes.filter(x=>!x.disabled&&x.checked).map(x=>x.dataset.id)}
+	function render(){
+		const items=selected();
+		document.querySelector('#prompt').textContent=`/run\n\nLoad docs/feature-lists/FEATURE_LIST_UI_CHAT_ASSISTANT.md and docs/feature-lists/FEATURE_LIST_UX_CHAT_ASSISTANT_AND_TIMER.md.\n\n${items.length?`Execute only these selected remaining packages:\n${items.map(x=>`- ${x}`).join('\n')}`:'No optional UI package is selected. Record the physical iPhone/Android locked-screen timer gate before claiming locked-screen success.'}\n\nPreserve the implemented timer/audio/collision and assistant-polish fixes. Keep actual chat-message content out of scope.`;
+		localStorage.setItem(KEY,JSON.stringify(items));
+	}
+	try { const saved=JSON.parse(localStorage.getItem(KEY)); if(Array.isArray(saved)) boxes.filter(x=>!x.disabled).forEach(x=>x.checked=saved.includes(x.dataset.id)); } catch {}
+	boxes.forEach(x=>x.addEventListener('change',render));
+	document.querySelector('#reset').addEventListener('click',()=>{boxes.filter(x=>!x.disabled).forEach(x=>x.checked=defaults[x.dataset.id]);render();document.querySelector('#notice').textContent='Selections reset.'});
+	document.querySelector('#copy').addEventListener('click',async()=>{
+		const text=document.querySelector('#prompt').textContent;
+		try { await navigator.clipboard.writeText(text); } catch { const t=document.createElement('textarea');t.value=text;document.body.append(t);t.select();document.execCommand('copy');t.remove(); }
+		document.querySelector('#notice').textContent='Prompt copied.';
+	});
+	render();
+</script>
+</body>
+</html>

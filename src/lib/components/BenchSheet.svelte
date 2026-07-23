@@ -2,15 +2,14 @@
 	Inline bench-sheet — recipe page's primary cooking surface.
 
 	Owns: deterministic cooking steps, current-step state, timer state,
-	timer-fire alarm (Web Audio + vibrate + best-effort SW notification),
-	screen Wake Lock, and an optional history log action.
+	timer-fire alarm (background media + Web Audio fallback + notification),
+	screen Wake Lock, and after-cooking feedback/log actions.
 
-	Phase 2b foreground-locked timer architecture is grounded in §0 of the
-	feature list (FEATURE_LIST_V2_COOKMODE_FLATTEN_AND_TIMER_INFRA.md):
-	verified that SW setTimeout is unreliable past ~30 s of idle, so the
-	clock lives in a dedicated Web Worker, not the SW. The worker tick
-	drives `now`; the cook view holds Wake Lock + AudioContext for as long
-	as it's mounted; SW notifications are best-effort piggy-backs.
+	SW setTimeout is unreliable past ~30 s of idle, so wall-clock UI state
+	lives in a dedicated Web Worker. A media track started by the timer tap
+	carries the alarm through normal browser backgrounding; physical-device
+	locked-screen behavior remains a release gate. Wake Lock, Web Audio,
+	vibrate, and SW notifications remain layered fallbacks while mounted.
 -->
 <script lang="ts">
 	import { base } from '$app/paths';
@@ -50,6 +49,7 @@
 		ServiceWorkerFireMessage,
 		TimerWorkerOutbound
 	} from '$lib/timer/messages';
+	import { BackgroundTimerAudio } from '$lib/timer/background_audio';
 
 	export type BenchSheetController = {
 		resetSession: () => void;
@@ -213,6 +213,7 @@
 	// keeps us from re-showing the primer in a loop.
 	let notificationPrimerVisible = $state(false);
 	let notificationPrimerShown = false;
+	let backgroundTimerAudio: BackgroundTimerAudio | null = null;
 
 	type TimerSnapshot = {
 		runningIdxs: Set<number>;
@@ -352,6 +353,7 @@
 	function onVisibilityChange() {
 		if (typeof document === 'undefined') return;
 		if (document.visibilityState !== 'visible') return;
+		tickNow(Date.now());
 		// A composed-meal plan may still be finishing when the phone returns.
 		if (requiresPlan && !localizedPlan && !loading && loadError && loadErrorRetryable) {
 			autoRetries = 0;
@@ -441,7 +443,9 @@
 
 	const VIBRATE_PATTERN: number[] = [200, 100, 200, 100, 200];
 	function fireAlarm(idx: number) {
-		playAlarm();
+		// A scheduled media track contains the alarm at the deadline and is
+		// already playing. Web Audio remains the foreground/degraded fallback.
+		if (!backgroundTimerAudio?.isActive(idx)) playAlarm();
 		try {
 			if (typeof navigator !== 'undefined' && navigator.vibrate) {
 				navigator.vibrate(VIBRATE_PATTERN);
@@ -579,11 +583,19 @@
 		beginSession();
 		ensureAudio();
 		maybeShowNotificationPrimer();
-		timerEnds[idx] = Date.now() + seconds * 1000;
+		const deadline = Date.now() + seconds * 1000;
+		if (typeof window !== 'undefined') {
+			backgroundTimerAudio ??= new BackgroundTimerAudio({
+				src: `${base}/audio/cook-timer-alarm.m4a`
+			});
+			backgroundTimerAudio.schedule(idx, deadline);
+		}
+		timerEnds[idx] = deadline;
 		if (!timerOrder.includes(idx)) timerOrder = [...timerOrder, idx];
 		firedFor.delete(idx);
 	}
 	function cancelTimer(idx: number) {
+		backgroundTimerAudio?.stop(idx);
 		delete timerEnds[idx];
 		timerOrder = timerOrder.filter((i) => i !== idx);
 		firedFor.delete(idx);
@@ -750,6 +762,7 @@
 		currentStepKey = cookMode ? normalizeCookProgress(currentKeys(cookMode), null).currentKey : null;
 		timerEnds = {};
 		timerOrder = [];
+		backgroundTimerAudio?.stopAll();
 		firedFor.clear();
 		benchSheetRating = null;
 		cookedDone = false;
@@ -776,6 +789,8 @@
 		if (retryTimer) clearTimeout(retryTimer);
 		terminateWorker();
 		releaseWakeLock();
+		backgroundTimerAudio?.stopAll();
+		backgroundTimerAudio = null;
 		// AudioContext.close() rejects if already closed; guard rather than
 		// swallow with try/catch around `void`.
 		if (audioCtx && audioCtx.state !== 'closed') {

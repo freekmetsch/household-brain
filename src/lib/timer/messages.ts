@@ -1,4 +1,4 @@
-// Shared message shapes for the foreground-locked cook-mode timer.
+// Shared message shapes for cook-mode timer ticks and notifications.
 // Imported by `lib/timer/worker.ts` (web worker), `service-worker.ts` (SW),
 // and `lib/components/BenchSheet.svelte` (main thread) so the wire format
 // stays in one place.

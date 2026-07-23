@@ -1,4 +1,4 @@
-// Foreground-locked cook-mode timer tick. Runs in its own thread so the
+// Cook-mode wall-clock tick. Runs in its own thread so the
 // 250 ms tick keeps advancing under main-thread throttling (e.g. when the
 // cook briefly switches apps). Subscribers send `{type:'subscribe', id}` to
 // start ticks and `{type:'unsubscribe', id}` to stop. The worker keeps

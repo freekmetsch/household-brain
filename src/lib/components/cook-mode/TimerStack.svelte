@@ -8,9 +8,11 @@
 	rare (the realistic ceiling on a stovetop is 2-3).
 -->
 <script lang="ts">
+	import { tick } from 'svelte';
 	import Timer from './Timer.svelte';
 	import { distinctTimerStepTitle } from './timer_labels';
 	import { m } from '$lib/paraglide/messages';
+	import { COOK_TIMER_LAYOUT_EVENT } from '$lib/timer/layout';
 	import type { CookModeStep } from '$lib/types';
 
 	type Props = {
@@ -32,6 +34,17 @@
 	let overflowCount = $derived(Math.max(0, ids.length - VISIBLE_CAP));
 	let announcement = $state('');
 	const announcedComplete = new Set<number>();
+
+	function publishTimerLayout() {
+		if (typeof window === 'undefined') return;
+		void tick().then(() => window.dispatchEvent(new Event(COOK_TIMER_LAYOUT_EVENT)));
+	}
+
+	$effect(() => {
+		void ids.join(',');
+		publishTimerLayout();
+		return publishTimerLayout;
+	});
 
 	function purposeFor(id: number): string {
 		const step = steps[id];
@@ -90,8 +103,8 @@
 
 {#if overflowCount > 0}
 	<div
-		class="fixed right-3 z-[74] rounded-full bg-amber-500/85 text-white text-[11px] font-semibold px-3 py-1 shadow-lg pointer-events-none"
-		style="bottom: calc(4.5rem + env(safe-area-inset-bottom) + {bottomClearanceRem + VISIBLE_CAP * 4.25}rem);"
+		class="fixed z-[74] rounded-full bg-amber-500/85 text-white text-[11px] font-semibold px-3 py-1 shadow-lg pointer-events-none"
+		style="right: var(--ui-timer-right); bottom: calc(4.5rem + env(safe-area-inset-bottom) + {bottomClearanceRem + VISIBLE_CAP * 4.25}rem);"
 		aria-label={m.cookmode_timerstack_more_aria({ count: overflowCount })}
 	>
 		{m.cookmode_timerstack_more_label({ count: overflowCount })}

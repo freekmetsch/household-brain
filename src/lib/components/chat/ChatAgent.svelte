@@ -5,8 +5,10 @@
 	import { draggable, type DragEventData, type DragOptions } from '@neodrag/svelte';
 	import ChatView from '$lib/components/ChatView.svelte';
 	import Icon from '$lib/components/ui/icons/Icon.svelte';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import type { ChatAgentController } from '$lib/stores/chat-agent.svelte';
+	import { COOK_TIMER_LAYOUT_EVENT } from '$lib/timer/layout';
 
 	let { controller }: { controller: ChatAgentController } = $props();
 	let dialog = $state<HTMLDialogElement>();
@@ -17,12 +19,30 @@
 	let verticalPosition = 0.68;
 	let edge: 'left' | 'right' = 'right';
 	let returnFocusToBubble = false;
+	let settlingBubble = false;
+	let settleAgain = false;
 	const STORAGE_KEY = 'kitchenbrain-agent-position-v1';
 
 	function persistPosition(rect: DOMRect) {
 		const available = Math.max(1, window.innerHeight - rect.height);
 		verticalPosition = Math.min(1, Math.max(0, rect.top / available));
-		localStorage.setItem(STORAGE_KEY, JSON.stringify({ verticalPosition, edge }));
+		try {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify({ verticalPosition, edge }));
+		} catch {
+			// Position memory is optional; layout settling must keep working if
+			// storage is unavailable or full.
+		}
+	}
+
+	function maxBubbleTop(height: number): number {
+		const fixedBarHeight =
+			Number.parseFloat(
+				getComputedStyle(document.documentElement).getPropertyValue('--ui-fixed-bar-height')
+			) || 0;
+		const obstructionTop =
+			document.querySelector<HTMLElement>('nav[aria-label]')?.getBoundingClientRect().top ??
+			window.innerHeight - fixedBarHeight;
+		return Math.max(12, obstructionTop - height - 12);
 	}
 
 	function placeAtSavedPosition() {
@@ -30,7 +50,7 @@
 		const rect = bubble.getBoundingClientRect();
 		const margin = 12;
 		const targetTop = Math.min(
-			window.innerHeight - rect.height - margin,
+			maxBubbleTop(rect.height),
 			Math.max(margin, verticalPosition * (window.innerHeight - rect.height))
 		);
 		const targetLeft = edge === 'left' ? margin : window.innerWidth - rect.width - margin;
@@ -38,6 +58,67 @@
 			x: position.x + targetLeft - rect.left,
 			y: position.y + targetTop - rect.top
 		};
+		void settleBubble();
+	}
+
+	function resolveTimerCollision() {
+		if (!bubble || controller.opened) return;
+		const bubbleRect = bubble.getBoundingClientRect();
+		const timerRects = [...document.querySelectorAll<HTMLElement>('[data-timer-id]')]
+			.map((node) => node.getBoundingClientRect())
+			.filter(
+				(rect) =>
+					rect.right + 12 > bubbleRect.left &&
+					rect.left - 12 < bubbleRect.right
+			);
+		if (timerRects.length === 0) return;
+		const stackTop = Math.min(...timerRects.map((rect) => rect.top));
+		const stackBottom = Math.max(...timerRects.map((rect) => rect.bottom));
+		if (bubbleRect.bottom + 12 <= stackTop || bubbleRect.top - 12 >= stackBottom) return;
+
+		const margin = 12;
+		const above = stackTop - bubbleRect.height - margin;
+		const below = stackBottom + margin;
+		if (above >= margin) {
+			position = { ...position, y: position.y + above - bubbleRect.top };
+			return;
+		}
+		if (below + bubbleRect.height <= window.innerHeight - margin) {
+			position = { ...position, y: position.y + below - bubbleRect.top };
+			return;
+		}
+
+		// A tall timer stack can consume the whole edge. Move the assistant to
+		// the other edge rather than forcing either control off-screen.
+		edge = edge === 'left' ? 'right' : 'left';
+		const targetLeft = edge === 'left' ? margin : window.innerWidth - bubbleRect.width - margin;
+		position = { ...position, x: position.x + targetLeft - bubbleRect.left };
+	}
+
+	async function settleBubble() {
+		if (settlingBubble) {
+			settleAgain = true;
+			return;
+		}
+		settlingBubble = true;
+		try {
+			do {
+				settleAgain = false;
+				await tick();
+				if (!bubble) break;
+				const rect = bubble.getBoundingClientRect();
+				const clampedTop = Math.min(maxBubbleTop(rect.height), Math.max(12, rect.top));
+				if (clampedTop !== rect.top) {
+					position = { ...position, y: position.y + clampedTop - rect.top };
+					await tick();
+				}
+				resolveTimerCollision();
+				await tick();
+				if (bubble) persistPosition(bubble.getBoundingClientRect());
+			} while (settleAgain);
+		} finally {
+			settlingBubble = false;
+		}
 	}
 
 	function snapToEdge(data: DragEventData) {
@@ -46,7 +127,7 @@
 		edge = rect.left + rect.width / 2 < window.innerWidth / 2 ? 'left' : 'right';
 		const targetLeft = edge === 'left' ? margin : window.innerWidth - rect.width - margin;
 		position = { x: data.offsetX + targetLeft - rect.left, y: data.offsetY };
-		void tick().then(() => bubble && persistPosition(bubble.getBoundingClientRect()));
+		void settleBubble();
 	}
 
 	let dragOptions = $derived<DragOptions>({
@@ -100,11 +181,11 @@
 			if (!bubble) return;
 			const rect = bubble.getBoundingClientRect();
 			const clampedTop = Math.min(
-				window.innerHeight - rect.height - 12,
+				maxBubbleTop(rect.height),
 				Math.max(12, rect.top)
 			);
 			position = { ...position, y: position.y + clampedTop - rect.top };
-			void tick().then(() => bubble && persistPosition(bubble.getBoundingClientRect()));
+			void settleBubble();
 		});
 	}
 
@@ -117,9 +198,16 @@
 	}
 
 	$effect(syncDialog);
+	$effect(() => {
+		if (!controller.opened) return;
+		document.documentElement.dataset.chatAgentOpen = 'true';
+		return () => {
+			delete document.documentElement.dataset.chatAgentOpen;
+		};
+	});
 
 	onMount(() => {
-		const query = window.matchMedia('(max-width: 47.999rem)');
+		const query = window.matchMedia('(max-width: 51.999rem)');
 		const updateMode = () => {
 			const changed = mobile !== query.matches;
 			mobile = query.matches;
@@ -139,9 +227,11 @@
 		}
 		void tick().then(placeAtSavedPosition);
 		window.addEventListener('resize', placeAtSavedPosition);
+		window.addEventListener(COOK_TIMER_LAYOUT_EVENT, settleBubble);
 		return () => {
 			query.removeEventListener('change', updateMode);
 			window.removeEventListener('resize', placeAtSavedPosition);
+			window.removeEventListener(COOK_TIMER_LAYOUT_EVENT, settleBubble);
 		};
 	});
 </script>
@@ -153,7 +243,7 @@
 		bind:this={bubble}
 		use:draggable={dragOptions}
 		type="button"
-		class="ui-z-agent fixed right-3 flex h-12 w-12 touch-none select-none items-center justify-center rounded-full bg-primary/95 text-primary-content shadow-lg transition-[translate,box-shadow,opacity] hover:bg-primary hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary {dragging ? 'ring-4 ring-primary/25' : ''}"
+		class="ui-z-agent fixed right-3 flex h-12 w-12 touch-none select-none items-center justify-center rounded-full bg-primary/95 text-primary-content shadow-lg transition-[box-shadow,opacity] hover:bg-primary hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary {dragging ? 'ring-4 ring-primary/25' : ''}"
 		style="bottom: var(--ui-overlay-bottom)"
 		aria-label={m.agent_open_aria()}
 		aria-keyshortcuts="ArrowUp ArrowDown"
@@ -177,6 +267,12 @@
 		event.preventDefault();
 		void closeAgent();
 	}}
+	onkeydown={(event) => {
+		if (event.key !== 'Escape') return;
+		event.preventDefault();
+		event.stopPropagation();
+		void closeAgent();
+	}}
 	onclose={() => {
 		// A programmatic close queues this event. If the panel was reopened before
 		// that queued event arrives, `dialog.open` is true again and the stale
@@ -190,7 +286,7 @@
 			<h2 id="agent-title" class="min-w-0 flex-1 truncate text-sm font-semibold">{m.agent_title()}</h2>
 			<button
 				type="button"
-				class="btn btn-ghost btn-sm h-10 min-h-10 w-10 p-0"
+				class="btn btn-ghost btn-sm h-11 min-h-0 w-11 p-0"
 				aria-label={m.agent_close_aria()}
 				onclick={() => void closeAgent()}><Icon name="x" class="h-4 w-4" /></button
 			>
@@ -203,7 +299,7 @@
 				>
 				<button
 					type="button"
-					class="btn btn-ghost btn-xs min-h-8"
+					class="btn btn-ghost btn-xs h-11 min-h-0"
 					onclick={() => controller.removeContext()}>{m.agent_remove_context()}</button
 				>
 			</div>
@@ -211,12 +307,23 @@
 
 		<div class="min-h-0 min-w-0 flex-1">
 			{#if controller.hydrating}
-				<div class="grid h-full place-items-center text-sm text-base-content/60">{m.agent_loading()}</div>
+				<div
+					class="grid h-full place-items-center text-sm text-base-content/60"
+					role="status"
+					aria-live="polite"
+					aria-atomic="true"
+				>
+					<span class="inline-flex items-center gap-2"><Spinner size="xs" />{m.agent_loading()}</span>
+				</div>
 			{:else if controller.hydrationError && controller.messages.length === 0}
-				<div class="grid h-full place-items-center px-6 text-center text-sm text-warning">
+				<div
+					class="grid h-full place-items-center px-6 text-center text-sm text-warning"
+					role="alert"
+					aria-atomic="true"
+				>
 					<div>
 						<p>{m.agent_history_error()}</p>
-						<button class="btn btn-sm btn-outline mt-3" onclick={() => controller.ensureHydrated()}
+						<button class="btn btn-sm btn-outline mt-3 h-11 min-h-0" onclick={() => controller.ensureHydrated()}
 							>{m.mealplan_retry_button()}</button
 						>
 					</div>
@@ -238,7 +345,7 @@
 		border-radius: var(--radius-box);
 		transform-origin: bottom right;
 	}
-	@media (min-width: 48rem) {
+	@media (min-width: 52rem) {
 		.agent-dialog[open] {
 			animation: agent-dialog-enter var(--motion-content) var(--ease-emphasized);
 		}
@@ -253,7 +360,7 @@
 			transform: translateY(0) scale(1);
 		}
 	}
-	@media (max-width: 47.999rem) {
+	@media (max-width: 51.999rem) {
 		.agent-dialog {
 			inset: 0;
 			width: 100vw;
